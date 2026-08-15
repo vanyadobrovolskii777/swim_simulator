@@ -1,4 +1,4 @@
-import { gameState, swimmer, aiSwimmer, remoteSwimmer, particles, avatarConfig, NORMAL_MAX_SPEED, MEGA_MAX_SPEED, REQUIRED_AI_WINS } from './state.js';
+import { gameState, swimmer, aiSwimmer, remoteSwimmer, particles, avatarConfig, NORMAL_MAX_SPEED, MEGA_MAX_SPEED, REQUIRED_AI_WINS, APP_VERSION } from './state.js';
 import { translations } from './locales.js';
 import { playSplashSound } from './audio.js';
 import { peerConnection } from './network.js';
@@ -17,6 +17,12 @@ const speedDisplay = document.getElementById("speedDisplay");
 // Register DOM and UI Callbacks
 registerUIListeners(pCtx, previewCanvas, gameContainer, canvas);
 updateOceanButtonUI();
+
+// Update Version Tag on Startup
+const versionBadge = document.getElementById("versionBadge");
+if (versionBadge) {
+  versionBadge.innerText = APP_VERSION;
+}
 
 // Input Tracking
 const keys = {};

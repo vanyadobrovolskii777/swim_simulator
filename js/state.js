@@ -1,3 +1,5 @@
+export const APP_VERSION = "v1.2.0"; // Bump this string whenever you commit/push
+
 export const NORMAL_MAX_SPEED = 5.2;
 export const MEGA_MAX_SPEED = 18.0;
 export const REQUIRED_AI_WINS = 10;
