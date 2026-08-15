@@ -6,7 +6,9 @@ let peer = null;
 export let peerConnection = null;
 export let myRoomCode = "";
 
+// Robust free public STUN configuration
 export const peerConfig = {
+    debug: 2, // PeerJS internal logging level (0 = none, 1 = errors, 2 = warnings/errors, 3 = all)
     config: {
         iceServers: [
             { urls: 'stun:stun.l.google.com:19302' },
@@ -18,6 +20,7 @@ export const peerConfig = {
     }
 };
 
+// Cross-tab broadcast channel
 export const bugHotlineChannel = (typeof BroadcastChannel !== "undefined")
     ? new BroadcastChannel("creator_bug_hotline")
     : null;
@@ -25,54 +28,84 @@ export const bugHotlineChannel = (typeof BroadcastChannel !== "undefined")
 if (bugHotlineChannel) {
     bugHotlineChannel.onmessage = (event) => {
         if (event.data?.type === "CALL_CREATOR_HELP") {
+            console.log("%c[Network] BroadcastChannel received bug hotline alert.", "color: #f43f5e; font-weight: bold;");
             triggerBackgroundAlert();
         }
     };
 }
 
 export function initOnlinePeer() {
-    if (peer && !peer.destroyed) return;
+    if (peer && !peer.destroyed) {
+        console.log("[Network] Peer instance already initialized with ID:", peer.id);
+        return;
+    }
 
     myRoomCode = Math.random().toString(36).substring(2, 6).toUpperCase();
-    document.getElementById("myRoomCodeDisplay").innerText = myRoomCode;
+    const peerId = `swim26-${myRoomCode.toLowerCase()}`;
 
-    peer = new Peer(`swim26-${myRoomCode.toLowerCase()}`, peerConfig);
+    console.log(`%c[Network] Initializing Peer with target ID: ${peerId}`, "color: #38bdf8; font-weight: bold;");
 
-    peer.on('open', () => {
-        document.getElementById("myRoomCodeDisplay").innerText = myRoomCode;
+    const roomDisplay = document.getElementById("myRoomCodeDisplay");
+    const statusDisplay = document.getElementById("onlineStatusText");
+
+    if (roomDisplay) roomDisplay.innerText = myRoomCode;
+    if (statusDisplay) statusDisplay.innerText = "Connecting to PeerJS signaling server...";
+
+    peer = new Peer(peerId, peerConfig);
+
+    peer.on('open', (id) => {
+        console.log(`%c[Network] Connected to PeerJS cloud! Registered ID: ${id}`, "color: #10b981; font-weight: bold;");
+        if (roomDisplay) roomDisplay.innerText = myRoomCode;
+        if (statusDisplay) statusDisplay.innerText = `Ready! Room [${myRoomCode}] open for connections.`;
         recordRoomVisit(myRoomCode);
-        document.getElementById("onlineStatusText").innerText = "Ready! Share your code with family/friend.";
     });
 
     peer.on('connection', (conn) => {
+        console.log(`%c[Network] Incoming connection from peer: ${conn.peer}`, "color: #fbbf24; font-weight: bold;");
         peerConnection = conn;
         gameState.isHost = true;
         setupPeerHandlers();
     });
 
+    peer.on('disconnected', () => {
+        console.warn("[Network] Peer disconnected from signaling server. Attempting reconnect...");
+        if (statusDisplay) statusDisplay.innerText = "⚠️ Disconnected from signaling. Reconnecting...";
+        peer.reconnect();
+    });
+
+    peer.on('close', () => {
+        console.warn("[Network] Peer closed completely.");
+    });
+
     peer.on('error', (err) => {
-        console.error("PeerJS Error:", err);
+        console.error("%c[Network] PeerJS Root Error:", "color: #ef4444; font-weight: bold;", err);
         if (err.type === 'unavailable-id') {
+            console.warn(`[Network] ID ${peerId} taken, trying new ID...`);
             myRoomCode = Math.random().toString(36).substring(2, 6).toUpperCase();
             peer = new Peer(`swim26-${myRoomCode.toLowerCase()}`, peerConfig);
         } else if (err.type === 'peer-unavailable') {
-            document.getElementById("onlineStatusText").innerText = "❌ Room not found! Make sure Host is in lobby.";
+            if (statusDisplay) statusDisplay.innerText = "❌ Room not found! Make sure Host is open in lobby.";
         } else {
-            document.getElementById("onlineStatusText").innerText = `⚠️ Connection error: ${err.type}`;
+            if (statusDisplay) statusDisplay.innerText = `⚠️ Error: ${err.type || err.message}`;
         }
     });
 }
 
 export function joinOnlineRoomByCode(code) {
+    const targetPeerId = `swim26-${code.toLowerCase()}`;
+    console.log(`%c[Network] Attempting to connect to host: ${targetPeerId}`, "color: #38bdf8; font-weight: bold;");
+
     recordRoomVisit(code);
-    document.getElementById("onlineStatusText").innerText = `Connecting to Room ${code}...`;
+    const statusDisplay = document.getElementById("onlineStatusText");
+    if (statusDisplay) statusDisplay.innerText = `Connecting to Host [${code}]...`;
 
     if (!peer || peer.destroyed) {
+        console.log("[Network] Local peer not ready, creating before connecting...");
         initOnlinePeer();
     }
 
     gameState.isHost = false;
-    peerConnection = peer.connect(`swim26-${code.toLowerCase()}`, {
+    peerConnection = peer.connect(targetPeerId, {
         reliable: true,
         config: peerConfig.config
     });
@@ -81,19 +114,32 @@ export function joinOnlineRoomByCode(code) {
 }
 
 function setupPeerHandlers() {
-    if (!peerConnection) return;
+    if (!peerConnection) {
+        console.error("[Network] setupPeerHandlers called with null connection");
+        return;
+    }
+
+    const statusDisplay = document.getElementById("onlineStatusText");
+    console.log(`[Network] Setting up event listeners for peer: ${peerConnection.peer}`);
 
     peerConnection.on('open', () => {
-        document.getElementById("onlineStatusText").innerText = "🎉 Connected! Starting race...";
+        console.log(`%c[Network] WebRTC DataChannel successfully OPEN with ${peerConnection.peer}!`, "color: #10b981; font-weight: bold;");
+        if (statusDisplay) statusDisplay.innerText = "🎉 Connected! Launching pool...";
         remoteSwimmer.connected = true;
-        document.getElementById("liveChatFeed").style.display = "flex";
 
+        const chatFeed = document.getElementById("liveChatFeed");
+        if (chatFeed) chatFeed.style.display = "flex";
+
+        // Send mutual handshake
+        console.log("[Network] Sending ready_handshake to peer...");
         peerConnection.send({ type: 'ready_handshake' });
+
         startOnlineRace();
     });
 
     peerConnection.on('data', (data) => {
         if (data.type === 'ready_handshake') {
+            console.log("%c[Network] Received ready_handshake from peer!", "color: #10b981;");
             remoteSwimmer.connected = true;
             if (!gameState.isOnlineMode) {
                 startOnlineRace();
@@ -111,19 +157,23 @@ function setupPeerHandlers() {
                 createBubbleCluster(remoteSwimmer.x - 28, remoteSwimmer.y, 2);
             }
         } else if (data.type === 'call_creator') {
+            console.log("[Network] Received remote creator call signal.");
             triggerBackgroundAlert();
         } else if (data.type === 'chat_msg') {
+            console.log(`[Network] Received chat message: "${data.text}"`);
             receiveChatMessage(data.text);
         }
     });
 
     peerConnection.on('close', () => {
+        console.warn(`%c[Network] WebRTC connection closed with ${peerConnection.peer}`, "color: #f59e0b;");
         remoteSwimmer.connected = false;
-        document.getElementById("onlineStatusText").innerText = "❌ Disconnected.";
+        if (statusDisplay) statusDisplay.innerText = "❌ Peer disconnected.";
     });
 
-    peerConnection.on('error', () => {
-        document.getElementById("onlineStatusText").innerText = "⚠️ Peer connection failed.";
+    peerConnection.on('error', (err) => {
+        console.error("%c[Network] DataConnection error:", "color: #ef4444; font-weight: bold;", err);
+        if (statusDisplay) statusDisplay.innerText = "⚠️ WebRTC connection error.";
     });
 }
 
