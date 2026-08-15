@@ -6,21 +6,24 @@ let peer = null;
 export let peerConnection = null;
 export let myRoomCode = "";
 
-// Robust free public STUN configuration
+// Cross-platform ICE & STUN configuration (macOS/Safari + Windows compatible)
 export const peerConfig = {
-    debug: 2, // PeerJS internal logging level (0 = none, 1 = errors, 2 = warnings/errors, 3 = all)
+    debug: 2, // PeerJS log level (2 = warnings & errors)
     config: {
         iceServers: [
             { urls: 'stun:stun.l.google.com:19302' },
             { urls: 'stun:stun1.l.google.com:19302' },
             { urls: 'stun:stun2.l.google.com:19302' },
             { urls: 'stun:stun3.l.google.com:19302' },
-            { urls: 'stun:stun4.l.google.com:19302' }
-        ]
+            { urls: 'stun:stun4.l.google.com:19302' },
+            { urls: 'stun:stun.cloudflare.com:3478' }
+        ],
+        sdpSemantics: 'unified-plan',
+        iceCandidatePoolSize: 10
     }
 };
 
-// Cross-tab broadcast channel
+// Cross-tab broadcast channel for local multi-tab events
 export const bugHotlineChannel = (typeof BroadcastChannel !== "undefined")
     ? new BroadcastChannel("creator_bug_hotline")
     : null;
@@ -36,14 +39,14 @@ if (bugHotlineChannel) {
 
 export function initOnlinePeer() {
     if (peer && !peer.destroyed) {
-        console.log("[Network] Peer instance already initialized with ID:", peer.id);
+        console.log("[Network] Peer instance already active with ID:", peer.id);
         return;
     }
 
     myRoomCode = Math.random().toString(36).substring(2, 6).toUpperCase();
     const peerId = `swim26-${myRoomCode.toLowerCase()}`;
 
-    console.log(`%c[Network] Initializing Peer with target ID: ${peerId}`, "color: #38bdf8; font-weight: bold;");
+    console.log(`%c[Network] Initializing Peer with ID: ${peerId}`, "color: #38bdf8; font-weight: bold;");
 
     const roomDisplay = document.getElementById("myRoomCodeDisplay");
     const statusDisplay = document.getElementById("onlineStatusText");
@@ -54,33 +57,33 @@ export function initOnlinePeer() {
     peer = new Peer(peerId, peerConfig);
 
     peer.on('open', (id) => {
-        console.log(`%c[Network] Connected to PeerJS cloud! Registered ID: ${id}`, "color: #10b981; font-weight: bold;");
+        console.log(`%c[Network] Registered on PeerJS cloud with ID: ${id}`, "color: #10b981; font-weight: bold;");
         if (roomDisplay) roomDisplay.innerText = myRoomCode;
         if (statusDisplay) statusDisplay.innerText = `Ready! Room [${myRoomCode}] open for connections.`;
         recordRoomVisit(myRoomCode);
     });
 
     peer.on('connection', (conn) => {
-        console.log(`%c[Network] Incoming connection from peer: ${conn.peer}`, "color: #fbbf24; font-weight: bold;");
+        console.log(`%c[Network] Incoming connection from: ${conn.peer}`, "color: #fbbf24; font-weight: bold;");
         peerConnection = conn;
         gameState.isHost = true;
         setupPeerHandlers();
     });
 
     peer.on('disconnected', () => {
-        console.warn("[Network] Peer disconnected from signaling server. Attempting reconnect...");
+        console.warn("[Network] Peer disconnected from signaling server. Reconnecting...");
         if (statusDisplay) statusDisplay.innerText = "⚠️ Disconnected from signaling. Reconnecting...";
         peer.reconnect();
     });
 
     peer.on('close', () => {
-        console.warn("[Network] Peer closed completely.");
+        console.warn("[Network] Peer instance closed completely.");
     });
 
     peer.on('error', (err) => {
         console.error("%c[Network] PeerJS Root Error:", "color: #ef4444; font-weight: bold;", err);
         if (err.type === 'unavailable-id') {
-            console.warn(`[Network] ID ${peerId} taken, trying new ID...`);
+            console.warn(`[Network] ID ${peerId} taken, generating a new one...`);
             myRoomCode = Math.random().toString(36).substring(2, 6).toUpperCase();
             peer = new Peer(`swim26-${myRoomCode.toLowerCase()}`, peerConfig);
         } else if (err.type === 'peer-unavailable') {
@@ -93,7 +96,7 @@ export function initOnlinePeer() {
 
 export function joinOnlineRoomByCode(code) {
     const targetPeerId = `swim26-${code.toLowerCase()}`;
-    console.log(`%c[Network] Attempting to connect to host: ${targetPeerId}`, "color: #38bdf8; font-weight: bold;");
+    console.log(`%c[Network] Connecting to host: ${targetPeerId}`, "color: #38bdf8; font-weight: bold;");
 
     recordRoomVisit(code);
     const statusDisplay = document.getElementById("onlineStatusText");
@@ -107,7 +110,7 @@ export function joinOnlineRoomByCode(code) {
     gameState.isHost = false;
     peerConnection = peer.connect(targetPeerId, {
         reliable: true,
-        config: peerConfig.config
+        serialization: 'json'
     });
 
     setupPeerHandlers();
