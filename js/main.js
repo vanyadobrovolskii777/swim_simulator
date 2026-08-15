@@ -14,15 +14,15 @@ const pCtx = previewCanvas.getContext("2d");
 const staminaFill = document.getElementById("staminaFill");
 const speedDisplay = document.getElementById("speedDisplay");
 
-// Register DOM and UI Callbacks
-registerUIListeners(pCtx, previewCanvas, gameContainer, canvas);
-updateOceanButtonUI();
-
-// Update Version Tag on Startup
+// Display App Version
 const versionBadge = document.getElementById("versionBadge");
 if (versionBadge) {
   versionBadge.innerText = APP_VERSION;
 }
+
+// Register DOM and UI Callbacks
+registerUIListeners(pCtx, previewCanvas, gameContainer, canvas);
+updateOceanButtonUI();
 
 // Input Tracking
 const keys = {};
@@ -77,10 +77,10 @@ function performLegKick() {
   const forwardX = Math.cos(swimmer.angle);
   const forwardY = Math.sin(swimmer.angle);
 
+  // Apply kick impulse in direction facing
   swimmer.vx += forwardX * (1.8 * boostMult);
-  if (!gameState.isChallengeMode && !gameState.isOnlineMode && !gameState.isSwimTestMode) {
-    swimmer.vy += forwardY * (1.8 * boostMult);
-  }
+  swimmer.vy += forwardY * (1.8 * boostMult);
+
   playSplashSound(gameState.isRecordingActive ? 280 : 140, 0.12);
   createBubbleCluster(swimmer.x - forwardX * 30, swimmer.y - forwardY * 30, gameState.isRecordingActive ? 12 : 5);
 }
@@ -94,10 +94,10 @@ function performArmStroke(direction = 1) {
   const forwardX = Math.cos(swimmer.angle);
   const forwardY = Math.sin(swimmer.angle);
 
+  // Apply stroke propulsion along current angle
   swimmer.vx += forwardX * (direction * 2.3 * boostMult);
-  if (!gameState.isChallengeMode && !gameState.isOnlineMode && !gameState.isSwimTestMode) {
-    swimmer.vy += forwardY * (direction * 2.3 * boostMult);
-  }
+  swimmer.vy += forwardY * (direction * 2.3 * boostMult);
+
   playSplashSound(gameState.isRecordingActive ? 420 : 220, 0.18);
   createRipple(swimmer.x, swimmer.y);
 }
@@ -124,67 +124,116 @@ function update() {
     }
   }
 
-  // Position & Movement Calculations
+  // Position & Movement Calculations (Full 360° Movement Enabled)
   if (!gameState.debugFreezeEntities) {
     const boostMult = gameState.isRecordingActive ? 2.5 : 1.0;
 
-    if (gameState.isChallengeMode || gameState.isOnlineMode || gameState.isSwimTestMode) {
-      swimmer.angle = 0;
-      swimmer.vy = 0;
+    // AI Logic in challenge mode
+    if (gameState.isChallengeMode && !gameState.raceOutcome) {
+      aiSwimmer.x += aiSwimmer.speed;
+      aiSwimmer.leftArmAngle += 0.22;
+      aiSwimmer.rightArmAngle += 0.22;
+      aiSwimmer.kickCycle += 0.28;
+    }
 
-      if (gameState.isChallengeMode && !gameState.raceOutcome) {
-        aiSwimmer.x += aiSwimmer.speed;
-        aiSwimmer.leftArmAngle += 0.22;
-        aiSwimmer.rightArmAngle += 0.22;
-        aiSwimmer.kickCycle += 0.28;
-      }
+    // Steering & Gliding in ALL modes (WASD + Arrow Keys)
+    if (keys["a"] || keys["arrowleft"]) {
+      swimmer.angle -= 0.055 * (gameState.isRecordingActive ? 1.4 : 1.0);
+    }
+    if (keys["d"] || keys["arrowright"]) {
+      swimmer.angle += 0.055 * (gameState.isRecordingActive ? 1.4 : 1.0);
+    }
+    if (keys["w"]) {
+      swimmer.vx += Math.cos(swimmer.angle) * 0.2 * boostMult;
+      swimmer.vy += Math.sin(swimmer.angle) * 0.2 * boostMult;
+    }
+    if (keys["s"]) {
+      swimmer.vx -= Math.cos(swimmer.angle) * 0.1 * boostMult;
+      swimmer.vy -= Math.sin(swimmer.angle) * 0.1 * boostMult;
+    }
 
-      if (!gameState.raceOutcome && !gameState.isSwimTestMode) {
-        if (swimmer.x >= 640) {
-          gameState.raceOutcome = "win";
-          if (gameState.isChallengeMode) {
-            gameState.aiRaceWins++;
-            localStorage.setItem("swim_sim_ai_wins", gameState.aiRaceWins.toString());
-            updateOceanButtonUI();
-          }
-        } else if (gameState.isChallengeMode && aiSwimmer.x >= 640) {
-          gameState.raceOutcome = "lose";
-        } else if (gameState.isOnlineMode && remoteSwimmer.x >= 640) {
-          gameState.raceOutcome = "lose";
+    // Check race finish line
+    if (!gameState.raceOutcome && !gameState.isSwimTestMode) {
+      if (swimmer.x >= 640) {
+        gameState.raceOutcome = "win";
+        if (gameState.isChallengeMode) {
+          gameState.aiRaceWins++;
+          localStorage.setItem("swim_sim_ai_wins", gameState.aiRaceWins.toString());
+          updateOceanButtonUI();
         }
-      }
-    } else {
-      if (keys["a"]) swimmer.angle -= 0.055 * (gameState.isRecordingActive ? 1.4 : 1.0);
-      if (keys["d"]) swimmer.angle += 0.055 * (gameState.isRecordingActive ? 1.4 : 1.0);
-      if (keys["w"]) {
-        swimmer.vx += Math.cos(swimmer.angle) * 0.2 * boostMult;
-        swimmer.vy += Math.sin(swimmer.angle) * 0.2 * boostMult;
-      }
-      if (keys["s"]) {
-        swimmer.vx -= Math.cos(swimmer.angle) * 0.1 * boostMult;
-        swimmer.vy -= Math.sin(swimmer.angle) * 0.1 * boostMult;
+      } else if (gameState.isChallengeMode && aiSwimmer.x >= 640) {
+        gameState.raceOutcome = "lose";
+      } else if (gameState.isOnlineMode && remoteSwimmer.x >= 640) {
+        gameState.raceOutcome = "lose";
       }
     }
 
+    // Apply water drag and speed limits in 2D
     swimmer.vx *= swimmer.drag;
     swimmer.vy *= swimmer.drag;
+
+    const currentSpeed = Math.hypot(swimmer.vx, swimmer.vy);
+    if (currentSpeed > swimmer.maxSpeed) {
+      swimmer.vx = (swimmer.vx / currentSpeed) * swimmer.maxSpeed;
+      swimmer.vy = (swimmer.vy / currentSpeed) * swimmer.maxSpeed;
+    }
+
     swimmer.x += swimmer.vx;
     swimmer.y += swimmer.vy;
   }
 
-  // Bounds
+  // Bounds & Lane Area Handling
   if (gameState.isChallengeMode) {
     swimmer.x = Math.max(30, Math.min(650, swimmer.x));
-    swimmer.y = 360;
+    swimmer.y = Math.max(250, Math.min(canvas.height - 30, swimmer.y)); // Free swim in Lane 2
   } else if (gameState.isOnlineMode) {
     swimmer.x = Math.max(30, Math.min(650, swimmer.x));
-    swimmer.y = gameState.isHost ? 360 : 120;
+    if (gameState.isHost) {
+      swimmer.y = Math.max(250, Math.min(canvas.height - 30, swimmer.y)); // Host in Lane 2
+    } else {
+      swimmer.y = Math.max(30, Math.min(230, swimmer.y)); // Guest in Lane 1
+    }
   } else if (gameState.isSwimTestMode) {
     swimmer.x = Math.max(30, Math.min(650, swimmer.x));
-    swimmer.y = 240;
-  } else {
-    swimmer.x = Math.max(30, Math.min(canvas.width - 30, swimmer.x));
     swimmer.y = Math.max(30, Math.min(canvas.height - 30, swimmer.y));
+  } else {
+    // Ocean and Free Roam
+    if (gameState.isOceanMode) {
+      if (swimmer.x < 0) swimmer.x = canvas.width;
+      if (swimmer.x > canvas.width) swimmer.x = 0;
+      if (swimmer.y < 40) swimmer.y = 40;
+      if (swimmer.y > canvas.height - 30) swimmer.y = canvas.height - 30;
+    } else {
+      swimmer.x = Math.max(30, Math.min(canvas.width - 30, swimmer.x));
+      swimmer.y = Math.max(30, Math.min(canvas.height - 30, swimmer.y));
+    }
+  }
+
+  // Arm & Leg animation cycles
+  if (!gameState.debugFreezeEntities) {
+    swimmer.leftArmAngle += swimmer.armRotationSpeed;
+    swimmer.rightArmAngle += swimmer.armRotationSpeed;
+    swimmer.armRotationSpeed *= 0.93;
+
+    const currentSpeed = Math.hypot(swimmer.vx, swimmer.vy);
+    if (swimmer.isKicking || currentSpeed > 0.6) {
+      swimmer.kickCycle += gameState.isRecordingActive ? 0.6 : 0.25;
+      if (Math.random() < (gameState.isRecordingActive ? 0.6 : 0.15)) {
+        const feetX = swimmer.x - Math.cos(swimmer.angle) * 28;
+        const feetY = swimmer.y - Math.sin(swimmer.angle) * 28;
+        createBubbleCluster(feetX, feetY, gameState.isRecordingActive ? 4 : 1);
+
+        if (gameState.isRecordingActive) {
+          particles.flameParticles.push({
+            x: feetX + (Math.random() - 0.5) * 8,
+            y: feetY + (Math.random() - 0.5) * 8,
+            radius: 4 + Math.random() * 6,
+            alpha: 1.0,
+            color: Math.random() > 0.5 ? "#f59e0b" : "#ef4444"
+          });
+        }
+      }
+    }
   }
 
   // Sync P2P Packets
@@ -200,6 +249,31 @@ function update() {
       isKicking: swimmer.isKicking,
       config: avatarConfig
     });
+  }
+
+  // Update Bubbles
+  for (let i = particles.bubbles.length - 1; i >= 0; i--) {
+    const b = particles.bubbles[i];
+    b.x += b.vx;
+    b.y += b.vy;
+    b.alpha -= 0.015;
+    if (b.alpha <= 0) particles.bubbles.splice(i, 1);
+  }
+
+  // Update Flame Particles
+  for (let i = particles.flameParticles.length - 1; i >= 0; i--) {
+    const p = particles.flameParticles[i];
+    p.alpha -= 0.04;
+    p.radius *= 0.95;
+    if (p.alpha <= 0) particles.flameParticles.splice(i, 1);
+  }
+
+  // Update Ripples
+  for (let i = particles.ripples.length - 1; i >= 0; i--) {
+    const r = particles.ripples[i];
+    r.radius += gameState.isRecordingActive ? 1.8 : 0.8;
+    r.alpha -= 0.02;
+    if (r.alpha <= 0 || r.radius >= r.maxRadius) particles.ripples.splice(i, 1);
   }
 
   speedDisplay.innerText = `${t.speed} ${(Math.hypot(swimmer.vx, swimmer.vy) * 2.2).toFixed(1)} KTS`;
