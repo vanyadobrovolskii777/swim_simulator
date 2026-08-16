@@ -1,1019 +1,228 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Swim Sim 2026 version 1.7</title>
-
-  <style>
-    * {
-      box-sizing: border-box;
-      user-select: none;
-    }
-    /* Build Version Badge */
-    #versionBadge {
-      position: absolute;
-      bottom: 8px;
-      right: 12px;
-      background: rgba(15, 23, 42, 0.75);
-      border: 1px solid rgba(56, 189, 248, 0.4);
-      color: #94a3b8;
-      font-size: 10px;
-      font-weight: bold;
-      letter-spacing: 1px;
-      padding: 2px 6px;
-      border-radius: 4px;
-      pointer-events: none;
-      z-index: 15;
-      user-select: none;
-    }
-    body {
-      margin: 0;
-      padding: 0;
-      background-color: #032030;
-      color: #e0f2fe;
-      font-family: 'Courier New', Courier, monospace;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      min-height: 100vh;
-      overflow: hidden;
-    }
-
-    #gameContainer {
-      position: relative;
-      width: 720px;
-      height: 480px;
-      border: 4px solid #38bdf8;
-      border-radius: 12px;
-      box-shadow: 0 0 35px rgba(56, 189, 248, 0.4), inset 0 0 20px rgba(14, 165, 233, 0.3);
-      overflow: hidden;
-      background: #0284c7;
-    }
-
-    #gameContainer:fullscreen {
-      width: 100vw;
-      height: 100vh;
-      border: none;
-      border-radius: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    canvas {
-      display: block;
-      background: #0284c7;
-    }
-
-    /* Top Corner Ocean Mode Button */
-    #oceanCornerBtn {
-      position: absolute;
-      top: 60px;
-      right: 14px;
-      background: rgba(15, 23, 42, 0.88);
-      color: #94a3b8;
-      border: 2px solid #475569;
-      border-radius: 20px;
-      padding: 6px 14px;
-      font-family: inherit;
-      font-size: 11px;
-      font-weight: bold;
-      cursor: not-allowed;
-      z-index: 15;
-      box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
-      transition: all 0.2s ease;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    #oceanCornerBtn.unlocked {
-      background: linear-gradient(135deg, #0284c7, #0d9488);
-      color: #ffffff;
-      border-color: #5eead4;
-      cursor: pointer;
-      box-shadow: 0 0 20px rgba(45, 212, 191, 0.6);
-      animation: oceanGlow 1.5s infinite alternate;
-    }
-
-    #oceanCornerBtn.unlocked:hover {
-      transform: scale(1.06);
-      box-shadow: 0 0 30px rgba(45, 212, 191, 0.9);
-    }
-
-    @keyframes oceanGlow {
-      0% { transform: scale(1); filter: drop-shadow(0 0 5px #2dd4bf); }
-      100% { transform: scale(1.03); filter: drop-shadow(0 0 15px #38bdf8); }
-    }
-
-    /* HUD */
-    #hud {
-      position: absolute;
-      top: 12px;
-      left: 12px;
-      right: 12px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      background: rgba(3, 32, 48, 0.85);
-      border: 1px solid #38bdf8;
-      border-radius: 8px;
-      padding: 8px 16px;
-      font-size: 13px;
-      font-weight: bold;
-      z-index: 10;
-    }
-
-    .bar-container {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .bar-bg {
-      width: 110px;
-      height: 10px;
-      background: #0f172a;
-      border: 1px solid #38bdf8;
-      border-radius: 5px;
-      overflow: hidden;
-    }
-
-    #staminaFill {
-      width: 100%;
-      height: 100%;
-      background: #10b981;
-      transition: width 0.1s ease;
-    }
-
-    #recordingBadge {
-      display: none;
-      background: #dc2626;
-      color: #ffffff;
-      border: 1px solid #fca5a5;
-      padding: 2px 8px;
-      border-radius: 4px;
-      font-size: 11px;
-      animation: recordBlink 0.8s infinite alternate;
-    }
-
-    @keyframes recordBlink {
-      0% { opacity: 1; transform: scale(1); }
-      100% { opacity: 0.6; transform: scale(1.05); }
-    }
-
-    .pause-btn {
-      background: #0284c7;
-      color: #ffffff;
-      border: 1px solid #38bdf8;
-      border-radius: 6px;
-      padding: 4px 10px;
-      font-family: inherit;
-      font-weight: bold;
-      font-size: 12px;
-      cursor: pointer;
-      transition: all 0.15s ease;
-    }
-
-    .pause-btn:hover {
-      background: #38bdf8;
-      color: #032030;
-      transform: scale(1.05);
-    }
-
-    /* Live In-Game Chat Box Overlay */
-    #liveChatFeed {
-      display: none;
-      position: absolute;
-      bottom: 12px;
-      left: 12px;
-      width: 260px;
-      max-height: 110px;
-      overflow-y: hidden;
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      pointer-events: none;
-      z-index: 12;
-    }
-
-    .chat-msg-pill {
-      background: rgba(15, 23, 42, 0.85);
-      border: 1px solid #38bdf8;
-      border-radius: 6px;
-      padding: 4px 8px;
-      font-size: 11px;
-      color: #e0f2fe;
-      animation: fadeInPill 0.3s ease;
-    }
-
-    @keyframes fadeInPill {
-      0% { opacity: 0; transform: translateY(6px); }
-      100% { opacity: 1; transform: translateY(0); }
-    }
-
-    /* Overlays */
-    .menu-overlay {
-      display: none;
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(3, 32, 48, 0.92);
-      backdrop-filter: blur(5px);
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      z-index: 20;
-    }
-
-    .menu-overlay h2 {
-      font-size: 26px;
-      color: #38bdf8;
-      margin: 0 0 3px 0;
-      letter-spacing: 2px;
-      text-shadow: 0 0 15px rgba(56, 189, 248, 0.6);
-    }
-
-    .menu-overlay p {
-      font-size: 11px;
-      color: #93c5fd;
-      margin: 0 0 10px 0;
-    }
-
-    .menu-buttons {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      width: 260px;
-    }
-
-    .menu-btn {
-      border-radius: 8px;
-      padding: 7px 0;
-      font-family: inherit;
-      font-weight: bold;
-      font-size: 12px;
-      cursor: pointer;
-      transition: all 0.15s ease;
-      width: 100%;
-      text-align: center;
-    }
-
-    .resume-btn {
-      background: #10b981;
-      color: #022c22;
-      border: 2px solid #a7f3d0;
-      box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
-    }
-    .resume-btn:hover { background: #34d399; transform: scale(1.02); }
-
-    .comm-btn {
-      background: #0284c7;
-      color: #ffffff;
-      border: 2px solid #7dd3fc;
-      box-shadow: 0 0 10px rgba(2, 132, 199, 0.5);
-    }
-    .comm-btn:hover { background: #0369a1; transform: scale(1.02); }
-
-    .test-btn {
-      background: #0ea5e9;
-      color: #ffffff;
-      border: 2px solid #bae6fd;
-      box-shadow: 0 0 10px rgba(14, 165, 233, 0.4);
-    }
-    .test-btn:hover { background: #38bdf8; transform: scale(1.02); }
-
-    .online-btn {
-      background: #0284c7;
-      color: #ffffff;
-      border: 2px solid #38bdf8;
-      box-shadow: 0 0 10px rgba(2, 132, 199, 0.4);
-    }
-    .online-btn:hover { background: #0ea5e9; transform: scale(1.02); }
-
-    .customize-btn {
-      background: #ec4899;
-      color: #ffffff;
-      border: 2px solid #fbcfe8;
-      box-shadow: 0 0 10px rgba(236, 72, 153, 0.4);
-    }
-    .customize-btn:hover { background: #f472b6; transform: scale(1.02); }
-
-    .challenge-btn {
-      background: #f59e0b;
-      color: #451a03;
-      border: 2px solid #fef08a;
-      box-shadow: 0 0 10px rgba(245, 158, 11, 0.4);
-    }
-    .challenge-btn:hover { background: #fbbf24; transform: scale(1.02); }
-
-    .call-btn {
-      background: #e11d48;
-      color: #ffffff;
-      border: 2px solid #fecdd3;
-      box-shadow: 0 0 12px rgba(225, 29, 72, 0.5);
-    }
-    .call-btn:hover { background: #f43f5e; transform: scale(1.02); }
-
-    #secretDebugBtn {
-      display: none;
-      background: #14b8a6;
-      color: #042f2e;
-      border: 2px dashed #99f6e4;
-      box-shadow: 0 0 15px rgba(20, 184, 166, 0.7);
-    }
-    #secretDebugBtn:hover { background: #2dd4bf; transform: scale(1.04); }
-
-    .options-btn {
-      background: #6366f1;
-      color: #ffffff;
-      border: 2px solid #c7d2fe;
-      box-shadow: 0 0 10px rgba(99, 102, 241, 0.4);
-    }
-    .options-btn:hover { background: #818cf8; transform: scale(1.02); }
-
-    .credits-btn {
-      background: #8b5cf6;
-      color: #ffffff;
-      border: 2px solid #ddd6fe;
-      box-shadow: 0 0 10px rgba(139, 92, 246, 0.4);
-    }
-    .credits-btn:hover { background: #a78bfa; transform: scale(1.02); }
-
-    .quit-btn {
-      background: #ef4444;
-      color: #ffffff;
-      border: 2px solid #fca5a5;
-      box-shadow: 0 0 10px rgba(239, 68, 68, 0.4);
-    }
-    .quit-btn:hover { background: #dc2626; transform: scale(1.02); }
-
-    /* Communication Modal Layout */
-    .comm-box {
-      width: 440px;
-      background: #091a28;
-      border: 2px solid #38bdf8;
-      border-radius: 12px;
-      padding: 16px 20px;
-      margin-bottom: 12px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    .quick-emotes-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 8px;
-    }
-
-    .emote-btn {
-      background: #1e293b;
-      color: #f8fafc;
-      border: 1px solid #38bdf8;
-      border-radius: 6px;
-      padding: 8px;
-      font-family: inherit;
-      font-size: 11px;
-      font-weight: bold;
-      cursor: pointer;
-      transition: all 0.15s ease;
-      text-align: center;
-    }
-    .emote-btn:hover {
-      background: #38bdf8;
-      color: #0f172a;
-      transform: scale(1.02);
-    }
-
-    .enemy-curse-btn {
-      border-color: #f43f5e;
-      color: #fca5a5;
-    }
-    .enemy-curse-btn:hover {
-      background: #e11d48 !important;
-      color: #ffffff !important;
-    }
-
-    .custom-chat-input-row {
-      display: flex;
-      gap: 8px;
-      margin-top: 4px;
-    }
-
-    /* Customizer Layout */
-    .customizer-box {
-      display: flex;
-      gap: 20px;
-      align-items: center;
-      background: #091a28;
-      border: 2px solid #38bdf8;
-      border-radius: 12px;
-      padding: 16px 20px;
-      margin-bottom: 12px;
-    }
-
-    .preview-col {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 6px;
-    }
-
-    #avatarPreviewCanvas {
-      background: #0284c7;
-      border: 2px solid #38bdf8;
-      border-radius: 8px;
-      box-shadow: 0 0 15px rgba(56, 189, 248, 0.3);
-    }
-
-    .controls-col {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      width: 320px;
-    }
-
-    .option-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 11px;
-      font-weight: bold;
-    }
-
-    .option-row label {
-      color: #e0f2fe;
-    }
-
-    .option-control {
-      background: #0f172a;
-      color: #38bdf8;
-      border: 1px solid #38bdf8;
-      border-radius: 6px;
-      padding: 3px 6px;
-      font-family: inherit;
-      font-weight: bold;
-      font-size: 11px;
-      cursor: pointer;
-    }
-
-    .option-input {
-      background: #0f172a;
-      color: #facc15;
-      border: 1px solid #38bdf8;
-      border-radius: 6px;
-      padding: 6px 10px;
-      font-family: inherit;
-      font-weight: bold;
-      font-size: 14px;
-      text-transform: uppercase;
-      letter-spacing: 2px;
-      text-align: center;
-      width: 140px;
-    }
-
-    .option-slider {
-      width: 120px;
-      cursor: pointer;
-      accent-color: #38bdf8;
-    }
-
-    /* Online Box Layout */
-    .online-box {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      width: 360px;
-      background: #091a28;
-      border: 2px solid #38bdf8;
-      border-radius: 12px;
-      padding: 16px 20px;
-      margin-bottom: 12px;
-      align-items: center;
-    }
-
-    .room-badge {
-      background: #0f172a;
-      border: 1px solid #10b981;
-      padding: 8px 16px;
-      border-radius: 8px;
-      color: #34d399;
-      font-size: 18px;
-      font-weight: bold;
-      letter-spacing: 3px;
-    }
-
-    .history-indicator {
-      font-size: 10px;
-      color: #94a3b8;
-      margin-top: 4px;
-      padding: 4px 8px;
-      background: #1e293b;
-      border-radius: 4px;
-      text-align: center;
-      width: 100%;
-    }
-
-    /* Debug Inspector Menu Box */
-    .debug-box {
-      width: 380px;
-      background: #091a28;
-      border: 2px solid #14b8a6;
-      border-radius: 12px;
-      padding: 16px 20px;
-      margin-bottom: 12px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-
-    .debug-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 12px;
-      font-weight: bold;
-    }
-
-    .debug-action-btn {
-      background: #0f766e;
-      color: #ccfbf1;
-      border: 1px solid #2dd4bf;
-      border-radius: 6px;
-      padding: 4px 10px;
-      font-family: inherit;
-      font-size: 11px;
-      font-weight: bold;
-      cursor: pointer;
-    }
-    .debug-action-btn:hover { background: #14b8a6; }
-
-    /* Sliding Credits */
-    .credits-viewport {
-      position: relative;
-      width: 540px;
-      height: 280px;
-      background: #061523;
-      border: 3px solid #8b5cf6;
-      border-radius: 16px;
-      overflow: hidden;
-      margin-bottom: 14px;
-      box-shadow: 0 0 35px rgba(139, 92, 246, 0.45), inset 0 0 25px rgba(0, 0, 0, 0.8);
-    }
-
-    .credits-viewport::before,
-    .credits-viewport::after {
-      content: "";
-      position: absolute;
-      left: 0;
-      right: 0;
-      height: 40px;
-      z-index: 5;
-      pointer-events: none;
-    }
-    .credits-viewport::before {
-      top: 0;
-      background: linear-gradient(to bottom, #061523, transparent);
-    }
-    .credits-viewport::after {
-      bottom: 0;
-      background: linear-gradient(to top, #061523, transparent);
-    }
-
-    .credits-slide-container {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 20px;
-      animation: slideDownCredits 14s linear infinite;
-    }
-
-    @keyframes slideDownCredits {
-      0% { transform: translateY(-110%); }
-      100% { transform: translateY(100%); }
-    }
-
-    .credits-title-big {
-      font-size: 22px;
-      font-weight: 900;
-      color: #c084fc;
-      margin-bottom: 16px;
-      letter-spacing: 3px;
-      text-shadow: 0 0 12px rgba(192, 132, 252, 0.8);
-    }
-
-    .credits-line {
-      font-size: 15px;
-      margin: 8px 0;
-      color: #f1f5f9;
-      font-weight: bold;
-      text-align: center;
-    }
-
-    .credits-line span {
-      color: #38bdf8;
-    }
-
-    .credits-thanks-big {
-      margin-top: 16px;
-      padding: 12px 18px;
-      border-top: 2px dashed #a855f7;
-      color: #fef08a;
-      font-size: 14px;
-      font-weight: bold;
-      text-align: center;
-      line-height: 1.6;
-    }
-
-    /* Call Creator Screen Modal */
-    .call-card {
-      width: 360px;
-      background: #0f172a;
-      border: 3px solid #f43f5e;
-      border-radius: 16px;
-      padding: 20px 24px;
-      margin-bottom: 14px;
-      box-shadow: 0 0 35px rgba(244, 63, 94, 0.4);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      text-align: center;
-      gap: 8px;
-    }
-
-    .call-avatar {
-      font-size: 48px;
-      margin-bottom: 4px;
-      animation: phoneWiggle 0.6s infinite alternate;
-    }
-
-    @keyframes phoneWiggle {
-      0% { transform: rotate(-10deg) scale(1); }
-      100% { transform: rotate(10deg) scale(1.1); }
-    }
-
-    /* Quit Message Overlay */
-    #quitOverlay {
-      display: none;
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: #032030;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      z-index: 30;
-    }
-
-    #quitOverlay h2 {
-      color: #ef4444;
-      font-size: 30px;
-      margin-bottom: 8px;
-    }
-
-    #controlsGuide {
-      margin-top: 12px;
-      font-size: 12px;
-      color: #93c5fd;
-      text-align: center;
-      line-height: 1.5;
-    }
-
-    #controlsGuide b {
-      color: #38bdf8;
-    }
-  </style>
-
-  <!-- PeerJS for WebRTC Direct Multiplayer -->
-  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Google! (1998 Classic)</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-  <div id="gameContainer">
-    <!-- Top Corner Ocean Mode Button -->
-    <button id="oceanCornerBtn" onclick="toggleOceanMode()">
-      <span id="oceanBtnIcon">🔒</span>
-      <span id="oceanBtnText">OCEAN (0/10 AI WINS)</span>
-    </button>
-
-    <div id="hud">
-      <div class="bar-container">
-        <span id="staminaLabel">STAMINA:</span>
-        <div class="bar-bg">
-          <div id="staminaFill"></div>
-        </div>
-      </div>
-      <span id="recordingBadge">🔴 REC: MEGA SPEED 3.5X</span>
-      <span id="speedDisplay">SPEED: 0.0 KTS</span>
-      <span id="modeDisplay">MODE: FREE ROAM</span>
-      <button class="pause-btn" id="hudPauseBtn" onclick="togglePause()">⏸️ PAUSE [P]</button>
+<!-- Classic Retro OS Window Frame -->
+<div class="window-frame">
+  <!-- Retro Title Bar -->
+  <div class="title-bar">
+    <div class="title-bar-text">
+      <span class="title-icon">🌐</span> Google Search - Microsoft Internet Explorer 4.0
     </div>
-
-    <!-- Live In-Game Chat Feed -->
-    <div id="liveChatFeed"></div>
-
-    <!-- Pause Menu -->
-    <div id="pauseOverlay" class="menu-overlay">
-      <h2 id="pauseTitle">GAME PAUSED</h2>
-      <p id="pauseSubtitle">Take a breath and stretch your arms!</p>
-      <div class="menu-buttons">
-        <button class="menu-btn resume-btn" id="resumeBtn" onclick="togglePause()">▶️ RESUME</button>
-        <button class="menu-btn comm-btn" id="commMenuBtn" onclick="openCommMenu()">💬 COMMUNICATE WITH FAMILY/FRIENDS</button>
-        <button class="menu-btn" id="secretDebugBtn" onclick="openDebugMenu()">🛠️ DEBUG ALL PLAYERS</button>
-        <button class="menu-btn call-btn" id="callCreatorBtn" onclick="callCreatorForBugs()">📞 CALL CREATOR FOR BUGS</button>
-        <button class="menu-btn test-btn" id="swimTestBtn" onclick="startSwimTest()">⏱️ SWIM TEST (5 STAGES)</button>
-        <button class="menu-btn online-btn" id="onlineBtn" onclick="openOnlineMenu()">🌐 PLAY ONLINE</button>
-        <button class="menu-btn customize-btn" id="customAvatarBtn" onclick="openAvatarCustomizer()">🎨 CUSTOMIZE AVATAR</button>
-        <button class="menu-btn challenge-btn" id="challengeBtn" onclick="startChallengeMode()">⚔️ AI SPRINT RACE</button>
-        <button class="menu-btn options-btn" id="optionsBtn" onclick="openOptionsMenu()">⚙️ OPTIONS</button>
-        <button class="menu-btn quit-btn" id="quitBtn" onclick="quitGame()">❌ QUIT GAME</button>
-      </div>
+    <div class="title-bar-controls">
+      <button class="win98-btn" id="fake-min-btn" aria-label="Minimize">_</button>
+      <button class="win98-btn" id="fake-max-btn" aria-label="Maximize">□</button>
+      <button class="win98-btn close-btn-retro" id="fake-close-btn" aria-label="Close">✕</button>
     </div>
-
-    <!-- Communication with Family/Friends Modal -->
-    <div id="commOverlay" class="menu-overlay">
-      <h2>💬 COMMUNICATE WITH FAMILY & FRIENDS</h2>
-      <p>Send speech bubbles & cheers to your family racer</p>
-
-      <div class="comm-box">
-        <div style="font-size: 11px; color: #38bdf8; font-weight: bold;">QUICK FAMILY CHEERS & EMOTES:</div>
-        <div class="quick-emotes-grid">
-          <button class="emote-btn" onclick="sendQuickMessage('Great race! 🏊')">🏊 "Great race!"</button>
-          <button class="emote-btn" onclick="sendQuickMessage('Look at my speed! ⚡')">⚡ "Look at my speed!"</button>
-          <button class="emote-btn" onclick="sendQuickMessage('Good job family! 👏')">👏 "Good job family!"</button>
-          <button class="emote-btn" onclick="sendQuickMessage('Almost at the finish! 🏁')">🏁 "Almost there!"</button>
-          <button class="emote-btn enemy-curse-btn" onclick="sendQuickMessage('Fuck you!')">🤬 "Fuck you!"</button>
-          <button class="emote-btn" onclick="sendQuickMessage('Rematch time! 🔥')">🔥 "Rematch time!"</button>
-        </div>
-
-        <div style="font-size: 11px; color: #38bdf8; font-weight: bold; margin-top: 6px;">CUSTOM MESSAGE:</div>
-        <div class="custom-chat-input-row">
-          <input type="text" id="customChatInput" class="option-control" style="flex: 1; padding: 6px 10px; font-size: 13px;" placeholder="Type message..." maxlength="45" />
-          <button class="menu-btn resume-btn" style="width: 80px; padding: 6px;" onclick="sendCustomMessage()">SEND 🚀</button>
-        </div>
-      </div>
-
-      <div style="width: 240px;">
-        <button class="menu-btn resume-btn" onclick="closeCommMenu()">⬅️ RESUME SWIM</button>
-      </div>
-    </div>
-
-    <!-- Online Lobby Menu -->
-    <div id="onlineOverlay" class="menu-overlay">
-      <h2>🌐 PLAY ONLINE WITH FAMILY</h2>
-      <p>Race together across screens via private room code</p>
-
-      <div class="online-box">
-        <div style="font-size: 11px; color: #94a3b8; text-align: center;">YOUR FAMILY ROOM CODE:</div>
-        <div class="room-badge" id="myRoomCodeDisplay">GENERATING...</div>
-
-        <div style="width: 100%; border-top: 1px solid #1e293b; margin: 4px 0;"></div>
-
-        <div style="font-size: 11px; color: #94a3b8; text-align: center;">OR JOIN A ROOM:</div>
-        <div style="display: flex; gap: 8px; align-items: center;">
-          <input type="text" id="joinCodeInput" class="option-input" placeholder="CODE" maxlength="4" />
-          <button class="menu-btn resume-btn" style="padding: 6px 14px; width: auto;" onclick="joinOnlineRoom()">JOIN</button>
-        </div>
-
-        <button class="menu-btn challenge-btn" style="margin-top: 4px; padding: 6px;" onclick="bumpIntoRandomRoom()">🎲 BUMP INTO RANDOM / OLD ROOM</button>
-
-        <div class="history-indicator" id="roomHistoryIndicator">Lobby History: Initializing...</div>
-        <div id="onlineStatusText" style="font-size: 11px; color: #facc15; font-weight: bold; margin-top: 2px;">Share your code with family to connect!</div>
-      </div>
-
-      <div style="width: 240px;">
-        <button class="menu-btn resume-btn" onclick="closeOnlineMenu()">⬅️ BACK</button>
-      </div>
-    </div>
-
-    <!-- Debug All Players Screen Modal -->
-    <div id="debugOverlay" class="menu-overlay">
-      <h2>🛠️ DEBUG ALL PLAYERS & ENTITIES</h2>
-      <p>Developer Control Hub & Inspector</p>
-
-      <div class="debug-box">
-        <div class="debug-row">
-          <span>COLLISION & HITBOX VECTORS:</span>
-          <button class="debug-action-btn" id="hitboxToggleBtn" onclick="toggleDebugHitboxes()">OFF</button>
-        </div>
-        <div class="debug-row">
-          <span>FREEZE ALL ENTITIES:</span>
-          <button class="debug-action-btn" id="freezeToggleBtn" onclick="toggleDebugFreeze()">OFF</button>
-        </div>
-        <div class="debug-row">
-          <span>RECORDING MEGA SPEED BOOST:</span>
-          <button class="debug-action-btn" id="recSimBtn" onclick="toggleSimulatedRecording()">OFF</button>
-        </div>
-        <div class="debug-row">
-          <span>TELEPORT ALL TO FINISH:</span>
-          <button class="debug-action-btn" onclick="debugTeleportAllToFinish()">TELEPORT 🏁</button>
-        </div>
-        <div class="debug-row">
-          <span>INFINITE STAMINA:</span>
-          <button class="debug-action-btn" onclick="debugMaxStamina()">FILL 100%</button>
-        </div>
-        <div class="debug-row">
-          <span>INSTANT UNLOCK OCEAN (+10 WINS):</span>
-          <button class="debug-action-btn" onclick="debugUnlockOcean()">UNLOCK 🌊</button>
-        </div>
-      </div>
-
-      <div style="width: 240px;">
-        <button class="menu-btn resume-btn" onclick="closeDebugMenu()">⬅️ BACK</button>
-      </div>
-    </div>
-
-    <!-- Call Creator Screen Modal -->
-    <div id="callOverlay" class="menu-overlay">
-      <h2>🚨 CREATOR BUG HOTLINE</h2>
-      <p>Emergency bug alert dispatched across all tabs</p>
-
-      <div class="call-card">
-        <div class="call-avatar">📞</div>
-        <div style="color: #f43f5e; font-size: 16px; font-weight: bold; letter-spacing: 1px;">CALLING IVAN DOBROVOLSKII...</div>
-        <div style="font-size: 12px; color: #94a3b8;">Status: Broadcast Sent to All Tabs</div>
-        <div style="font-size: 13px; color: #fef08a; font-weight: bold; margin-top: 6px; padding: 6px; background: #1e293b; border-radius: 6px; width: 100%;">
-          "someone needs help"
-        </div>
-      </div>
-
-      <div style="width: 240px;">
-        <button class="menu-btn resume-btn" onclick="closeCallMenu()">⬅️ HANG UP & BACK</button>
-      </div>
-    </div>
-
-    <!-- Avatar Customizer Menu -->
-    <div id="avatarOverlay" class="menu-overlay">
-      <h2>SWIMMER CUSTOMIZER</h2>
-      <p>Design your champion swimmer look</p>
-
-      <div class="customizer-box">
-        <div class="preview-col">
-          <div id="versionBadge"></div>
-          <canvas id="avatarPreviewCanvas" width="130" height="180"></canvas>
-          <span style="font-size: 10px; color: #38bdf8; font-weight: bold;">LIVE PREVIEW</span>
-        </div>
-
-        <div class="controls-col">
-          <div class="option-row">
-            <label for="skinSelect">SKIN TONE:</label>
-            <select id="skinSelect" class="option-control" onchange="updateAvatarPart('skin', this.value)">
-              <option value="#fcd34d">Fair Golden</option>
-              <option value="#f59e0b">Warm Tan</option>
-              <option value="#d97706">Bronze Sun</option>
-              <option value="#854d0e">Deep Brown</option>
-              <option value="#38bdf8">Glitch Neon</option>
-            </select>
-          </div>
-
-          <div class="option-row">
-            <label for="hairSelect">HAIR STYLE:</label>
-            <select id="hairSelect" class="option-control" onchange="updateAvatarPart('hairStyle', this.value)">
-              <option value="none">Cap Only (Sleek)</option>
-              <option value="short">Short Crop</option>
-              <option value="spiky">Spiky Bangs</option>
-              <option value="ponytail">Sport Ponytail</option>
-              <option value="waves">Long Flow</option>
-            </select>
-          </div>
-
-          <div class="option-row">
-            <label for="hairColorSelect">HAIR COLOR:</label>
-            <select id="hairColorSelect" class="option-control" onchange="updateAvatarPart('hairColor', this.value)">
-              <option value="#0f172a">Jet Black</option>
-              <option value="#78350f">Chestnut</option>
-              <option value="#eab308">Blonde</option>
-              <option value="#ef4444">Crimson Red</option>
-              <option value="#a855f7">Cyber Purple</option>
-            </select>
-          </div>
-
-          <div class="option-row">
-            <label for="gogglesSelect">GOGGLES TINT:</label>
-            <select id="gogglesSelect" class="option-control" onchange="updateAvatarPart('goggles', this.value)">
-              <option value="#0f172a">Stealth Black</option>
-              <option value="#06b6d4">Aqua Mirror</option>
-              <option value="#f97316">Sunset Amber</option>
-              <option value="#a855f7">Neon Violet</option>
-              <option value="none">No Goggles</option>
-            </select>
-          </div>
-
-          <div class="option-row">
-            <label for="eyesSelect">EYES / EXPRESSION:</label>
-            <select id="eyesSelect" class="option-control" onchange="updateAvatarPart('eyes', this.value)">
-              <option value="focus">Fierce Focus</option>
-              <option value="wide">Wide & Ready</option>
-              <option value="chill">Cool & Chill</option>
-              <option value="determined">Determined</option>
-            </select>
-          </div>
-
-          <div class="option-row">
-            <label for="faceFeatureSelect">FACE DETAILS:</label>
-            <select id="faceFeatureSelect" class="option-control" onchange="updateAvatarPart('faceFeature', this.value)">
-              <option value="none">Clean</option>
-              <option value="freckles">Freckles</option>
-              <option value="blush">Cheek Flush</option>
-              <option value="stubble">Stubble Beard</option>
-            </select>
-          </div>
-
-          <div class="option-row">
-            <label for="suitColorSelect">SWIMSUIT COLOR:</label>
-            <select id="suitColorSelect" class="option-control" onchange="updateAvatarPart('suitColor', this.value)">
-              <option value="#0284c7">Royal Blue</option>
-              <option value="#10b981">Emerald Green</option>
-              <option value="#ef4444">Race Red</option>
-              <option value="#f59e0b">Golden Sun</option>
-              <option value="#0f172a">Midnight Obsidian</option>
-              <option value="#ec4899">Hot Pink</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      <div style="width: 240px;">
-        <button class="menu-btn resume-btn" onclick="closeAvatarCustomizer()">💾 SAVE & BACK</button>
-      </div>
-    </div>
-
-    <!-- Options Sub-Menu -->
-    <div id="optionsOverlay" class="menu-overlay">
-      <h2 id="optionsTitle">SETTINGS & OPTIONS</h2>
-      <p id="optionsSubtitle">Adjust your game experience</p>
-
-      <div style="width: 280px; display: flex; flex-direction: column; gap: 8px;">
-        <div class="option-row">
-          <label id="langLabel" for="languageSelect">LANGUAGE:</label>
-          <select id="languageSelect" class="option-control" onchange="changeLanguage(this.value)">
-            <option value="en">English</option>
-            <option value="es">Español</option>
-            <option value="fr">Français</option>
-            <option value="de">Deutsch</option>
-          </select>
-        </div>
-
-        <div class="option-row">
-          <label id="volumeLabel" for="volumeSlider">VOLUME (<span id="volVal">100%</span>):</label>
-          <input type="range" id="volumeSlider" class="option-slider" min="0" max="1" step="0.05" value="1" oninput="changeVolume(this.value)" />
-        </div>
-
-        <div class="option-row">
-          <label id="displayLabel">DISPLAY:</label>
-          <button id="displayToggleBtn" class="option-control" onclick="toggleDisplayMode()">🔲 FULLSCREEN</button>
-        </div>
-
-        <button class="menu-btn credits-btn" id="creditsBtn" onclick="openCreditsMenu()">📜 CREDITS</button>
-        <button class="menu-btn resume-btn" id="backOptionsBtn" onclick="closeOptionsMenu()">⬅️ BACK</button>
-      </div>
-    </div>
-
-    <!-- Credits Screen Modal with Sliding Text Animation -->
-    <div id="creditsOverlay" class="menu-overlay">
-      <h2>📜 GAME CREDITS</h2>
-      <p id="creditsSubHeader">Sliding Credits Roll</p>
-
-      <div class="credits-viewport">
-        <div class="credits-slide-container">
-          <div class="credits-title-big">🏊 SWIM SIMULATOR 🏊</div>
-          <div class="credits-line">By <span>Ivan Dobrovolskii</span></div>
-          <div class="credits-line">Art by <span>Google Gemini</span></div>
-          <div class="credits-line">Tool Used: <span>Notepad++</span></div>
-          <div class="credits-line">Made in <span>2026</span></div>
-          <div class="credits-thanks-big">
-            ✨ <b>Special Thanks:</b><br />
-            Swimmers, my cat 🐱, and Gemini for making this!
-          </div>
-        </div>
-      </div>
-
-      <div style="width: 240px;">
-        <button class="menu-btn resume-btn" onclick="closeCreditsMenu()">⬅️ BACK TO MENU</button>
-      </div>
-    </div>
-
-    <!-- Quit Screen -->
-    <div id="quitOverlay">
-      <h2>SESSION CLOSED</h2>
-      <p style="color: #94a3b8; font-size: 13px;">You can safely close this browser tab now.</p>
-    </div>
-
-    <canvas id="swimCanvas" width="720" height="480"></canvas>
   </div>
 
-  <div id="controlsGuide">
-    <b>FREE ROAM / OCEAN</b>: WASD to steer/glide &nbsp;|&nbsp; <b>TEST / CHALLENGE</b>: Straight sprint!<br>
-    <b>SPACEBAR</b>: Kick Legs &nbsp;|&nbsp; <b>▲ / ▼ ARROWS</b>: Arm Circles &nbsp;|&nbsp; <b>F9 / Ctrl+R</b>: Toggle Recording Speed Boost<br>
-    <span style="font-size: 10px; color: #64748b;">(Win 10 AI races to unlock Ocean Mode in top corner! Press <b>C</b> in Online Mode to Chat)</span>
+  <!-- Top Navigation Bar -->
+  <nav class="top-nav">
+    <div class="logo-container">
+      <h1 class="logo">
+        <span style="color: #4285F4 !important;">G</span><span style="color: #EA4335 !important;">o</span><span style="color: #FBBC05 !important;">o</span><span style="color: #4285F4 !important;">g</span><span style="color: #34A853 !important;">l</span><span style="color: #EA4335 !important;">e</span><span style="color: #9C27B0 !important;">!</span>
+      </h1>
+    </div>
+
+    <div class="top-menu">
+      <button class="nav-btn" id="call-btn">📞 Call</button>
+      <button class="nav-btn" id="favorites-btn">⭐ Favorites</button>
+      <div class="dropdown">
+        <button class="nav-btn" id="more-btn">⚙️ More ▾</button>
+        <div class="dropdown-content" id="more-dropdown">
+          <a href="https://maps.google.com" target="_blank">🗺️ Maps</a>
+          <a href="https://news.google.com" target="_blank">📰 News</a>
+          <a href="https://mail.google.com" target="_blank">✉️ Gmail</a>
+          <a href="#" id="clear-history-btn">🧹 Clear Search</a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Centered Search Layout -->
+  <main class="main-content">
+    <div class="search-box-container">
+      <p class="tagline">Search the web using Google!</p>
+      <form id="search-form">
+        <input type="text" id="search-input" autofocus autocomplete="off" placeholder="Enter search term...">
+        <div class="buttons">
+          <button type="submit" id="search-btn">Google Search</button>
+          <button type="button" id="lucky-btn">I'm feeling lucky</button>
+        </div>
+      </form>
+    </div>
+
+    <div id="results" class="results-container hidden"></div>
+
+    <footer>
+      <p class="copyright">Copyright ©1998 Google Inc.</p>
+    </footer>
+  </main>
+</div>
+
+<!-- Real Phone Dialer Modal -->
+<div id="modal-overlay" class="modal-overlay hidden">
+  <div class="retro-modal" id="call-modal">
+    <div class="modal-header">
+      <span>Google Phone Dialer v1.0</span>
+      <button class="win98-btn close-btn-retro" onclick="closeModals()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p class="dialer-desc">Enter phone number or extension to place a direct call:</p>
+
+      <div class="dialer-screen">
+        <input type="tel" id="phone-input" placeholder="e.g. +1 555-0199" autocomplete="off" />
+        <button id="dialer-backspace" class="win98-btn" title="Backspace">⌫</button>
+      </div>
+
+      <!-- 12-Key Vintage Keypad -->
+      <div class="dialpad-grid">
+        <button class="key-btn" data-key="1">1</button>
+        <button class="key-btn" data-key="2">2 <small>ABC</small></button>
+        <button class="key-btn" data-key="3">3 <small>DEF</small></button>
+        <button class="key-btn" data-key="4">4 <small>GHI</small></button>
+        <button class="key-btn" data-key="5">5 <small>JKL</small></button>
+        <button class="key-btn" data-key="6">6 <small>MNO</small></button>
+        <button class="key-btn" data-key="7">7 <small>PQRS</small></button>
+        <button class="key-btn" data-key="8">8 <small>TUV</small></button>
+        <button class="key-btn" data-key="9">9 <small>WXYZ</small></button>
+        <button class="key-btn" data-key="*">*</button>
+        <button class="key-btn" data-key="0">0 <small>+</small></button>
+        <button class="key-btn" data-key="#">#</button>
+      </div>
+
+      <div class="dialer-actions">
+        <button class="win98-dialog-btn call-action-btn" id="start-call-btn">📞 Place Call</button>
+        <button class="win98-dialog-btn" onclick="closeModals()">Cancel</button>
+      </div>
+    </div>
   </div>
 
-  <script type="module" src="js/main.js"></script>
+  <!-- Favorites Modal -->
+  <div class="retro-modal" id="favorites-modal">
+    <div class="modal-header">
+      <span>Favorites & Bookmarks</span>
+      <button class="win98-btn close-btn-retro" onclick="closeModals()">✕</button>
+    </div>
+    <div class="modal-body">
+      <ul class="favorites-list">
+        <li><a href="https://www.wikipedia.org" target="_blank">🌐 Wikipedia Web Archive</a></li>
+        <li><a href="https://www.youtube.com" target="_blank">▶ YouTube Video Hub</a></li>
+        <li><a href="https://archive.org" target="_blank">🏛️ Wayback Machine (1998 Web)</a></li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- Fake Shutdown Modal -->
+<div id="fake-close-modal" class="modal-overlay hidden">
+  <div class="retro-modal active">
+    <div class="modal-header">
+      <span>Microsoft Internet Explorer</span>
+      <button class="win98-btn close-btn-retro" onclick="cancelExit()">✕</button>
+    </div>
+    <div class="modal-body win98-dialog-body">
+      <div class="dialog-icon">⚠️</div>
+      <div class="dialog-msg">
+        <strong>Shutting down Google Search?</strong>
+        <p>Are you sure you want to disconnect from the World Wide Web?</p>
+      </div>
+    </div>
+    <div class="win98-dialog-actions">
+      <button class="win98-dialog-btn" id="confirm-exit-btn">Yes</button>
+      <button class="win98-dialog-btn" onclick="cancelExit()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
 </body>
-</html>
+</html>/* Dialpad Modal Enhancements */
+.dialer-desc {
+margin: 0 0 10px 0;
+font-size: 12px;
+color: #333333;
+}
+
+.dialer-screen {
+display: flex;
+gap: 4px;
+margin-bottom: 12px;
+}
+
+.dialer-screen input {
+flex: 1;
+font-family: "Courier New", monospace;
+font-size: 18px;
+font-weight: bold;
+letter-spacing: 1px;
+padding: 4px 8px;
+background: #ffffff;
+border: 2px inset #ffffff;
+color: #000080;
+}
+
+#dialer-backspace {
+width: 28px;
+height: 28px;
+font-size: 14px;
+}
+
+.dialpad-grid {
+display: grid;
+grid-template-columns: repeat(3, 1fr);
+gap: 6px;
+margin-bottom: 14px;
+}
+
+.key-btn {
+background: #ece9d8;
+border: 2px outset #ffffff;
+padding: 8px 4px;
+font-family: "Tahoma", sans-serif;
+font-size: 15px;
+font-weight: bold;
+display: flex;
+flex-direction: column;
+align-items: center;
+justify-content: center;
+color: #000000;
+user-select: none;
+}
+
+.key-btn small {
+font-size: 8px;
+font-weight: normal;
+color: #666666;
+margin-top: 2px;
+letter-spacing: 1px;
+}
+
+.key-btn:active {
+border-style: inset;
+background: #ded9c8;
+}
+
+.dialer-actions {
+display: flex;
+justify-content: flex-end;
+gap: 8px;
+border-top: 1px groove #ffffff;
+padding-top: 10px;
+}
+
+.call-action-btn {
+background: #008000 !important;
+color: #ffffff !important;
+font-weight: bold;
+}
+
+.call-action-btn:hover {
+background: #006b00 !important;
+}

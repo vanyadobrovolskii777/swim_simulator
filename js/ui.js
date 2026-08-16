@@ -1,7 +1,7 @@
-import { gameState, avatarConfig, swimmer, aiSwimmer, remoteSwimmer, REQUIRED_AI_WINS, swimTestStages, localSpeechBubble, remoteSpeechBubble } from './state.js';
+import { gameState, avatarConfig, swimmer, aiSwimmer, remoteSwimmers, REQUIRED_AI_WINS, swimTestStages, localSpeechBubble, remoteSpeechBubble } from './state.js';
 import { translations } from './locales.js';
 import { playPhoneRing, playChimeSound, playBleepSound, speakFilteredDialogue, setAudioVolume, playTickSound, playSplashSound } from './audio.js';
-import { initOnlinePeer, joinOnlineRoomByCode, isConnectedToLeastRecentRival, peerConnection, bugHotlineChannel } from './network.js';
+import { initOnlinePeer, joinOnlineRoomByCode, isConnectedToLeastRecentRival, broadcastPacket, bugHotlineChannel } from './network.js';
 import { drawCustomSwimmer, spawnOceanCreatures } from './renderer.js';
 
 const pauseOverlay = document.getElementById("pauseOverlay");
@@ -45,6 +45,7 @@ export function togglePause() {
 }
 
 export function updateOceanButtonUI() {
+    if (!oceanCornerBtn || !oceanBtnIcon || !oceanBtnText) return;
     if (gameState.aiRaceWins >= REQUIRED_AI_WINS) {
         oceanCornerBtn.classList.add("unlocked");
         oceanBtnIcon.innerText = "🌊";
@@ -142,13 +143,10 @@ export function startOnlineRace() {
     gameState.raceOutcome = null;
 
     swimmer.x = 60;
-    swimmer.y = gameState.isHost ? 360 : 120;
+    swimmer.y = gameState.isHost ? 240 : 120;
     swimmer.angle = 0;
     swimmer.vx = 0;
     swimmer.vy = 0;
-
-    remoteSwimmer.x = 60;
-    remoteSwimmer.y = gameState.isHost ? 120 : 360;
 }
 
 export function triggerBackgroundAlert() {
@@ -181,6 +179,7 @@ export function receiveChatMessage(rawText) {
 
 export function addChatFeedPill(text) {
     const liveChatFeed = document.getElementById("liveChatFeed");
+    if (!liveChatFeed) return;
     const pill = document.createElement("div");
     pill.className = "chat-msg-pill";
     pill.innerText = text;
@@ -216,7 +215,8 @@ export function openCreditsMenu(customSub = "Sliding Credits Roll") {
     optionsOverlay.style.display = "none";
     pauseOverlay.style.display = "none";
     creditsOverlay.style.display = "flex";
-    document.getElementById("creditsSubHeader").innerText = customSub;
+    const subEl = document.getElementById("creditsSubHeader");
+    if (subEl) subEl.innerText = customSub;
 
     const slider = document.querySelector(".credits-slide-container");
     if (slider) {
@@ -226,7 +226,6 @@ export function openCreditsMenu(customSub = "Sliding Credits Roll") {
     }
 }
 
-// Bind HTML Window Callbacks
 export function registerUIListeners(pCtx, previewCanvas, gameContainer, canvas) {
     window.togglePause = togglePause;
     window.toggleOceanMode = () => toggleOceanMode(canvas);
@@ -256,13 +255,13 @@ export function registerUIListeners(pCtx, previewCanvas, gameContainer, canvas) 
             playChimeSound(600);
             speakFilteredDialogue(displayText);
         }
-        if (peerConnection?.open) peerConnection.send({ type: 'chat_msg', text });
+        broadcastPacket({ type: 'chat_msg', text });
         window.closeCommMenu();
     };
 
     window.sendCustomMessage = () => {
         const input = document.getElementById("customChatInput");
-        if (input.value.trim()) {
+        if (input && input.value.trim()) {
             window.sendQuickMessage(input.value.trim());
             input.value = "";
         }
@@ -270,7 +269,7 @@ export function registerUIListeners(pCtx, previewCanvas, gameContainer, canvas) 
 
     window.callCreatorForBugs = () => {
         if (bugHotlineChannel) bugHotlineChannel.postMessage({ type: "CALL_CREATOR_HELP" });
-        if (peerConnection?.open) peerConnection.send({ type: "call_creator" });
+        broadcastPacket({ type: 'call_creator' });
         pauseOverlay.style.display = "none";
         callOverlay.style.display = "flex";
         triggerBackgroundAlert();
@@ -364,7 +363,8 @@ export function registerUIListeners(pCtx, previewCanvas, gameContainer, canvas) 
     window.debugTeleportAllToFinish = () => {
         swimmer.x = 620;
         aiSwimmer.x = 620;
-        if (remoteSwimmer.connected) remoteSwimmer.x = 620;
+        if (remoteSwimmers.peer1.connected) remoteSwimmers.peer1.x = 620;
+        if (remoteSwimmers.peer2.connected) remoteSwimmers.peer2.x = 620;
     };
     window.debugMaxStamina = () => {
         swimmer.stamina = swimmer.maxStamina;
@@ -393,11 +393,14 @@ export function registerUIListeners(pCtx, previewCanvas, gameContainer, canvas) 
         swimmer.angle = 0;
         swimmer.vx = 0;
         swimmer.vy = 0;
+        swimmer.stage = 1;
+        swimmer.hearts = 3;
 
         aiSwimmer.x = 60;
         aiSwimmer.y = 120;
         aiSwimmer.vx = 0;
         aiSwimmer.vy = 0;
+        aiSwimmer.stage = 1;
     };
 
     window.quitGame = () => {

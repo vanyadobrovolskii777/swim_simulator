@@ -1,4 +1,4 @@
-import { gameState, particles, swimmer, aiSwimmer, remoteSwimmer, avatarConfig, localSpeechBubble, remoteSpeechBubble } from './state.js';
+import { gameState, particles, swimmer, aiSwimmer, remoteSwimmers, avatarConfig, localSpeechBubble, remoteSpeechBubble, bossState, stageData } from './state.js';
 import { isConnectedToLeastRecentRival } from './network.js';
 
 export function createBubbleCluster(x, y, count) {
@@ -37,107 +37,50 @@ export function spawnOceanCreatures(canvas) {
             color: Math.random() > 0.5 ? "#f59e0b" : "#38bdf8"
         });
     }
-    for (let i = 0; i < 2; i++) {
-        particles.oceanCreatures.push({
-            type: "turtle",
-            x: Math.random() * canvas.width,
-            y: 120 + Math.random() * (canvas.height - 200),
-            vx: (Math.random() > 0.5 ? 1 : -1) * 0.7,
-            vy: (Math.random() - 0.5) * 0.2,
-            size: 18,
-            paddleAngle: 0
-        });
-    }
-    for (let i = 0; i < 3; i++) {
-        particles.oceanCreatures.push({
-            type: "jellyfish",
-            x: Math.random() * canvas.width,
-            y: 150 + Math.random() * (canvas.height - 220),
-            vy: -0.4 - Math.random() * 0.3,
-            pulse: Math.random() * Math.PI,
-            size: 12,
-            color: "#c084fc"
-        });
-    }
 }
 
 export function render(ctx, canvas) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+    // 1. Stage Backgrounds
     if (gameState.isOceanMode) {
         const oceanGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
         oceanGrad.addColorStop(0, "#0369a1");
-        oceanGrad.addColorStop(0.5, "#075985");
         oceanGrad.addColorStop(1, "#082f49");
         ctx.fillStyle = oceanGrad;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
+    } else if (swimmer.stage === 5) {
+        // Stage 5: Boss Lava Arena
+        ctx.fillStyle = "#1e1b4b";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        ctx.fillStyle = "rgba(255, 255, 255, 0.06)";
-        for (let i = 0; i < 5; i++) {
-            ctx.beginPath();
-            ctx.moveTo(80 + i * 140, 0);
-            ctx.lineTo(130 + i * 140, 0);
-            ctx.lineTo(220 + i * 140, canvas.height);
-            ctx.lineTo(170 + i * 140, canvas.height);
-            ctx.fill();
+        // Lava Zone on the right edge
+        const lavaGrad = ctx.createLinearGradient(560, 0, canvas.width, 0);
+        lavaGrad.addColorStop(0, "rgba(239, 68, 68, 0.4)");
+        lavaGrad.addColorStop(0.3, "#f97316");
+        lavaGrad.addColorStop(1, "#dc2626");
+        ctx.fillStyle = lavaGrad;
+        ctx.fillRect(560, 0, canvas.width - 560, canvas.height);
+
+        ctx.fillStyle = "#fef08a";
+        ctx.font = "bold 13px monospace";
+        ctx.fillText("🔥 LAVA PIT 🔥", 580, 24);
+
+        // Lava Bubbles
+        if (Math.random() < 0.3) {
+            particles.lavaBubbles.push({
+                x: 570 + Math.random() * 140,
+                y: Math.random() * canvas.height,
+                radius: 3 + Math.random() * 5,
+                alpha: 1
+            });
         }
-
-        particles.oceanCreatures.forEach(c => {
-            ctx.save();
-            if (c.type === "fish") {
-                ctx.fillStyle = c.color;
-                ctx.beginPath();
-                ctx.ellipse(c.x, c.y, c.size * 1.5, c.size * 0.7, c.vx > 0 ? 0 : Math.PI, 0, Math.PI * 2);
-                ctx.fill();
-            } else if (c.type === "turtle") {
-                ctx.fillStyle = "#15803d";
-                ctx.beginPath();
-                ctx.ellipse(c.x, c.y, c.size, c.size * 0.75, c.vx > 0 ? 0 : Math.PI, 0, Math.PI * 2);
-                ctx.fill();
-            } else if (c.type === "jellyfish") {
-                ctx.fillStyle = "rgba(192, 132, 252, 0.4)";
-                ctx.beginPath();
-                ctx.arc(c.x, c.y, c.size, Math.PI, 0);
-                ctx.fill();
-            }
-            ctx.restore();
-        });
-    } else if (gameState.isChallengeMode || gameState.isOnlineMode || gameState.isSwimTestMode) {
-        if (gameState.isChallengeMode || gameState.isOnlineMode) {
-            ctx.fillStyle = "rgba(15, 23, 42, 0.4)";
-            ctx.fillRect(0, 0, canvas.width, 240);
-            ctx.fillStyle = "#ef4444";
-            ctx.fillRect(0, 236, canvas.width, 8);
-            ctx.strokeStyle = "#ffffff";
-            ctx.setLineDash([10, 10]);
-            ctx.strokeRect(0, 236, canvas.width, 8);
-            ctx.setLineDash([]);
-        }
-
-        ctx.strokeStyle = "#facc15";
-        ctx.lineWidth = 6;
-        ctx.beginPath();
-        ctx.moveTo(640, 0);
-        ctx.lineTo(640, canvas.height);
-        ctx.stroke();
-
-        ctx.fillStyle = "rgba(255,255,255,0.4)";
-        ctx.font = "bold 16px monospace";
-
-        if (gameState.isSwimTestMode) {
-            ctx.fillStyle = gameState.testSecondsRemaining <= 3 ? "#ef4444" : (gameState.testSecondsRemaining <= 6 ? "#f59e0b" : "#fef08a");
-            ctx.font = "bold 20px monospace";
-            ctx.fillText(`⏱️ STAGE ${gameState.currentTestStage + 1}/5 | TIME: ${gameState.testSecondsRemaining}s`, 30, 45);
-        } else if (gameState.isOnlineMode) {
-            const rivalTag = isConnectedToLeastRecentRival() ? "OLD RIVAL" : "FAMILY/FRIEND";
-            ctx.fillText(gameState.isHost ? `LANE 1: ${rivalTag}` : `LANE 1: YOU (GUEST)`, 30, 40);
-            ctx.fillText(gameState.isHost ? `LANE 2: YOU (HOST)` : `LANE 2: ${rivalTag} (HOST)`, 30, 280);
-        } else {
-            ctx.fillText("LANE 1: AI", 30, 40);
-            ctx.fillText("LANE 2: PLAYER", 30, 280);
-        }
-        ctx.fillText("FINISH 🏁", 610, 30);
     } else {
+        // Stages 1-4 Pool
+        ctx.fillStyle = swimmer.stage > 1 ? "#0369a1" : "#0284c7";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Pool Divider Lines
         ctx.strokeStyle = "rgba(255, 255, 255, 0.15)";
         ctx.setLineDash([12, 12]);
         ctx.lineWidth = 2;
@@ -150,30 +93,107 @@ export function render(ctx, canvas) {
         ctx.setLineDash([]);
     }
 
-    particles.flameParticles.forEach(p => {
-        ctx.fillStyle = p.color;
-        ctx.globalAlpha = p.alpha;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.globalAlpha = 1.0;
-    });
+    // 2. Render Wall Obstacles (Stages 2, 3, 4)
+    if (swimmer.stage >= 2 && swimmer.stage <= 4) {
+        stageData.walls.forEach(w => {
+            ctx.fillStyle = "#f43f5e";
+            ctx.shadowColor = "#f43f5e";
+            ctx.shadowBlur = 12;
+            ctx.fillRect(w.x, w.y, w.width, w.height);
+            ctx.shadowBlur = 0;
 
-    particles.ripples.forEach((r) => {
-        ctx.strokeStyle = gameState.isRecordingActive ? `rgba(250, 204, 21, ${r.alpha})` : `rgba(224, 242, 254, ${r.alpha})`;
-        ctx.lineWidth = gameState.isRecordingActive ? 3 : 2;
+            ctx.strokeStyle = "#ffe4e6";
+            ctx.lineWidth = 2;
+            ctx.strokeRect(w.x, w.y, w.width, w.height);
+        });
+    }
+
+    // 3. Render Finish Line (Stages 1-4)
+    if (swimmer.stage < 5) {
+        ctx.strokeStyle = "#facc15";
+        ctx.lineWidth = 6;
+        ctx.beginPath();
+        ctx.moveTo(640, 0);
+        ctx.lineTo(640, canvas.height);
+        ctx.stroke();
+
+        ctx.fillStyle = "#fef08a";
+        ctx.font = "bold 13px monospace";
+        ctx.fillText(`STAGE ${swimmer.stage}/5 FINISH 🏁`, 480, 24);
+    }
+
+    // 4. Render Stage 5 Boss Target Circle & Boss
+    if (swimmer.stage === 5) {
+        // Boss Target Circle Attack
+        ctx.save();
+        ctx.lineWidth = bossState.isTargetLocked ? 4 : 2;
+        ctx.strokeStyle = bossState.isTargetLocked ? "#ef4444" : "rgba(239, 68, 68, 0.6)";
+        ctx.fillStyle = bossState.isTargetLocked ? "rgba(239, 68, 68, 0.35)" : "rgba(239, 68, 68, 0.12)";
+        ctx.beginPath();
+        ctx.arc(bossState.targetX, bossState.targetY, bossState.circleRadius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        if (bossState.isTargetLocked) {
+            ctx.fillStyle = "#fecaca";
+            ctx.font = "bold 12px monospace";
+            ctx.textAlign = "center";
+            ctx.fillText("⚠️ DANGER! GET OUT! ⚠️", bossState.targetX, bossState.targetY - bossState.circleRadius - 6);
+        }
+        ctx.restore();
+
+        // Scattered Power-Up Mushrooms
+        stageData.mushrooms.forEach(m => {
+            ctx.save();
+            // Stem
+            ctx.fillStyle = "#f1f5f9";
+            ctx.fillRect(m.x - 3, m.y, 6, 8);
+            // Cap
+            ctx.fillStyle = "#eab308";
+            ctx.beginPath();
+            ctx.arc(m.x, m.y, 9, Math.PI, 0);
+            ctx.fill();
+            // Spots
+            ctx.fillStyle = "#ffffff";
+            ctx.beginPath();
+            ctx.arc(m.x - 4, m.y - 4, 2, 0, Math.PI * 2);
+            ctx.arc(m.x + 4, m.y - 4, 2, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        });
+
+        // Render Boss (Kraken)
+        drawKrakenBoss(ctx);
+    }
+
+    // 5. Draw Particles & Lava Bubbles
+    for (let i = particles.lavaBubbles.length - 1; i >= 0; i--) {
+        const lb = particles.lavaBubbles[i];
+        ctx.fillStyle = `rgba(254, 240, 138, ${lb.alpha})`;
+        ctx.beginPath();
+        ctx.arc(lb.x, lb.y, lb.radius, 0, Math.PI * 2);
+        ctx.fill();
+        lb.y -= 0.8;
+        lb.alpha -= 0.02;
+        if (lb.alpha <= 0) particles.lavaBubbles.splice(i, 1);
+    }
+
+    particles.ripples.forEach(r => {
+        ctx.strokeStyle = `rgba(224, 242, 254, ${r.alpha})`;
+        ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.arc(r.x, r.y, r.radius, 0, Math.PI * 2);
         ctx.stroke();
     });
 
-    particles.bubbles.forEach((b) => {
+    particles.bubbles.forEach(b => {
         ctx.fillStyle = `rgba(255, 255, 255, ${b.alpha})`;
         ctx.beginPath();
         ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
         ctx.fill();
     });
 
+    // 6. Draw AI Swimmer (Challenge Mode)
     if (gameState.isChallengeMode) {
         const aiConfig = {
             skin: "#f59e0b",
@@ -184,20 +204,99 @@ export function render(ctx, canvas) {
             faceFeature: "none",
             suitColor: "#ef4444"
         };
-        drawCustomSwimmer(ctx, aiSwimmer.x, aiSwimmer.y, aiSwimmer.angle, aiSwimmer.leftArmAngle, aiSwimmer.rightArmAngle, aiSwimmer.kickCycle, aiConfig, "AI_OPPONENT");
+        drawCustomSwimmer(ctx, aiSwimmer.x, aiSwimmer.y, aiSwimmer.angle, aiSwimmer.leftArmAngle, aiSwimmer.rightArmAngle, aiSwimmer.kickCycle, aiConfig, `AI (Stage ${aiSwimmer.stage})`);
     }
 
-    if (gameState.isOnlineMode && remoteSwimmer.connected) {
-        drawCustomSwimmer(ctx, remoteSwimmer.x, remoteSwimmer.y, remoteSwimmer.angle, remoteSwimmer.leftArmAngle, remoteSwimmer.rightArmAngle, remoteSwimmer.kickCycle, remoteSwimmer.config, "ONLINE_PLAYER");
-        if (remoteSpeechBubble.timer > 0) {
-            drawSpeechBubble(ctx, canvas, remoteSwimmer.x, remoteSwimmer.y - 30, remoteSpeechBubble.text, isConnectedToLeastRecentRival() ? "#ef4444" : "#ec4899");
+    // 7. Draw 3-Player Swimmers (Online Mode)
+    if (gameState.isOnlineMode) {
+        if (remoteSwimmers.peer1.connected) {
+            drawCustomSwimmer(ctx, remoteSwimmers.peer1.x, remoteSwimmers.peer1.y, remoteSwimmers.peer1.angle, remoteSwimmers.peer1.leftArmAngle, remoteSwimmers.peer1.rightArmAngle, remoteSwimmers.peer1.kickCycle, remoteSwimmers.peer1.config, `P2 (Stage ${remoteSwimmers.peer1.stage})`, remoteSwimmers.peer1.hasMushroomPower);
+        }
+        if (remoteSwimmers.peer2.connected) {
+            drawCustomSwimmer(ctx, remoteSwimmers.peer2.x, remoteSwimmers.peer2.y, remoteSwimmers.peer2.angle, remoteSwimmers.peer2.leftArmAngle, remoteSwimmers.peer2.rightArmAngle, remoteSwimmers.peer2.kickCycle, remoteSwimmers.peer2.config, `P3 (Stage ${remoteSwimmers.peer2.stage})`, remoteSwimmers.peer2.hasMushroomPower);
         }
     }
 
-    drawCustomSwimmer(ctx, swimmer.x, swimmer.y, swimmer.angle, swimmer.leftArmAngle, swimmer.rightArmAngle, swimmer.kickCycle, avatarConfig, "LOCAL_PLAYER");
+    // 8. Draw Local Swimmer
+    drawCustomSwimmer(ctx, swimmer.x, swimmer.y, swimmer.angle, swimmer.leftArmAngle, swimmer.rightArmAngle, swimmer.kickCycle, avatarConfig, `YOU (Stage ${swimmer.stage})`, swimmer.hasMushroomPower);
+
+    // 9. Speech Bubbles
     if (localSpeechBubble.timer > 0) {
         drawSpeechBubble(ctx, canvas, swimmer.x, swimmer.y - 30, localSpeechBubble.text, "#38bdf8");
     }
+    if (remoteSpeechBubble.timer > 0 && remoteSwimmers.peer1.connected) {
+        drawSpeechBubble(ctx, canvas, remoteSwimmers.peer1.x, remoteSwimmers.peer1.y - 30, remoteSpeechBubble.text, "#ec4899");
+    }
+
+    // 10. HUD Overlays: Hearts & Power-up Readout
+    renderHeartsHUD(ctx);
+}
+
+function renderHeartsHUD(ctx) {
+    // Local Player Hearts
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 13px monospace";
+    ctx.textAlign = "left";
+    ctx.fillText(`STAGE ${swimmer.stage} | HEARTS: ${"❤️".repeat(Math.max(0, swimmer.hearts))}`, 18, 55);
+
+    if (swimmer.hasMushroomPower) {
+        ctx.fillStyle = "#facc15";
+        ctx.fillText("🍄 MUSHROOM POWER: PUSH THE BOSS!", 18, 75);
+    }
+
+    // Boss Hearts (Stage 5)
+    if (swimmer.stage === 5) {
+        ctx.fillStyle = "#f87171";
+        ctx.textAlign = "right";
+        ctx.fillText(`BOSS HEARTS: ${"🖤".repeat(3 - bossState.hearts)}${"❤️".repeat(Math.max(0, bossState.hearts))}`, 700, 55);
+        ctx.textAlign = "left";
+    }
+}
+
+function drawKrakenBoss(targetCtx) {
+    targetCtx.save();
+    targetCtx.translate(bossState.x, bossState.y);
+
+    // Tentacles
+    bossState.tentacleAngle += 0.05;
+    targetCtx.strokeStyle = bossState.isStunned ? "#a855f7" : "#7c3aed";
+    targetCtx.lineWidth = 7;
+    targetCtx.lineCap = "round";
+
+    for (let i = 0; i < 6; i++) {
+        const angle = (i * Math.PI) / 3;
+        const wave = Math.sin(bossState.tentacleAngle + i) * 12;
+        targetCtx.beginPath();
+        targetCtx.moveTo(0, 0);
+        targetCtx.quadraticCurveTo(Math.cos(angle) * 30 + wave, Math.sin(angle) * 30 + wave, Math.cos(angle) * 55, Math.sin(angle) * 55);
+        targetCtx.stroke();
+    }
+
+    // Body
+    targetCtx.fillStyle = bossState.isStunned ? "#c084fc" : "#6d28d9";
+    targetCtx.beginPath();
+    targetCtx.arc(0, 0, 32, 0, Math.PI * 2);
+    targetCtx.fill();
+
+    targetCtx.strokeStyle = "#4c1d95";
+    targetCtx.lineWidth = 3;
+    targetCtx.stroke();
+
+    // Glowing Eyes
+    targetCtx.fillStyle = bossState.isStunned ? "#facc15" : "#ef4444";
+    targetCtx.beginPath();
+    targetCtx.arc(-10, -6, 6, 0, Math.PI * 2);
+    targetCtx.arc(10, -6, 6, 0, Math.PI * 2);
+    targetCtx.fill();
+
+    if (bossState.isStunned) {
+        targetCtx.fillStyle = "#fef08a";
+        targetCtx.font = "bold 11px monospace";
+        targetCtx.textAlign = "center";
+        targetCtx.fillText("⭐ STUNNED! PUSH HIM! ⭐", 0, -42);
+    }
+
+    targetCtx.restore();
 }
 
 export function drawSpeechBubble(targetCtx, canvas, x, y, text, borderColor) {
@@ -223,10 +322,13 @@ export function drawSpeechBubble(targetCtx, canvas, x, y, text, borderColor) {
     targetCtx.restore();
 }
 
-export function drawCustomSwimmer(targetCtx, x, y, angle, leftArm, rightArm, kick, config, entityTag = "") {
+export function drawCustomSwimmer(targetCtx, x, y, angle, leftArm, rightArm, kick, config, entityTag = "", hasPower = false) {
     targetCtx.save();
     targetCtx.translate(x, y);
     targetCtx.rotate(angle);
+
+    const scale = hasPower ? 1.35 : 1.0;
+    targetCtx.scale(scale, scale);
 
     const leftLegOffset = Math.sin(kick) * 7;
     const rightLegOffset = -Math.sin(kick) * 7;
@@ -245,7 +347,7 @@ export function drawCustomSwimmer(targetCtx, x, y, angle, leftArm, rightArm, kic
     targetCtx.lineTo(-26 + rightLegOffset * 0.2, 8 + rightLegOffset);
     targetCtx.stroke();
 
-    targetCtx.fillStyle = config.suitColor;
+    targetCtx.fillStyle = hasPower ? "#f59e0b" : config.suitColor;
     targetCtx.fillRect(-12, -7, 14, 14);
 
     targetCtx.fillStyle = config.skin;
@@ -273,92 +375,19 @@ export function drawCustomSwimmer(targetCtx, x, y, angle, leftArm, rightArm, kic
     targetCtx.arc(16, 0, 8, 0, Math.PI * 2);
     targetCtx.fill();
 
-    if (config.hairStyle !== "none") {
-        targetCtx.fillStyle = config.hairColor;
-        if (config.hairStyle === "short") {
-            targetCtx.beginPath();
-            targetCtx.arc(14, 0, 7.5, Math.PI * 0.5, Math.PI * 1.5);
-            targetCtx.fill();
-        } else if (config.hairStyle === "spiky") {
-            targetCtx.beginPath();
-            targetCtx.moveTo(11, -8);
-            targetCtx.lineTo(7, -12);
-            targetCtx.lineTo(13, -6);
-            targetCtx.lineTo(8, -8);
-            targetCtx.lineTo(15, -4);
-            targetCtx.fill();
-        } else if (config.hairStyle === "ponytail") {
-            targetCtx.beginPath();
-            targetCtx.arc(13, 0, 8, Math.PI * 0.4, Math.PI * 1.6);
-            targetCtx.fill();
-            targetCtx.beginPath();
-            targetCtx.ellipse(6, 0, 6, 3, 0, 0, Math.PI * 2);
-            targetCtx.fill();
-        } else if (config.hairStyle === "waves") {
-            targetCtx.beginPath();
-            targetCtx.ellipse(10, -8, 8, 4, -0.3, 0, Math.PI * 2);
-            targetCtx.ellipse(10, 8, 8, 4, 0.3, 0, Math.PI * 2);
-            targetCtx.fill();
-        }
-    }
-
-    if (config.faceFeature === "freckles") {
-        targetCtx.fillStyle = "#78350f";
-        targetCtx.fillRect(19, -4, 1.5, 1.5);
-        targetCtx.fillRect(18, 0, 1.5, 1.5);
-        targetCtx.fillRect(19, 4, 1.5, 1.5);
-    } else if (config.faceFeature === "blush") {
-        targetCtx.fillStyle = "rgba(244, 63, 94, 0.6)";
-        targetCtx.beginPath();
-        targetCtx.arc(18, -4, 2.5, 0, Math.PI * 2);
-        targetCtx.arc(18, 4, 2.5, 0, Math.PI * 2);
-        targetCtx.fill();
-    } else if (config.faceFeature === "stubble") {
-        targetCtx.fillStyle = "rgba(15, 23, 42, 0.5)";
-        targetCtx.fillRect(20, -3, 3, 6);
-    }
-
-    targetCtx.fillStyle = "#0f172a";
-    if (config.eyes === "focus") {
-        targetCtx.fillRect(18, -4, 3, 2);
-        targetCtx.fillRect(18, 2, 3, 2);
-    } else if (config.eyes === "wide") {
-        targetCtx.beginPath();
-        targetCtx.arc(19, -3, 2, 0, Math.PI * 2);
-        targetCtx.arc(19, 3, 2, 0, Math.PI * 2);
-        targetCtx.fill();
-    } else if (config.eyes === "chill") {
-        targetCtx.fillRect(18, -4, 3, 1);
-        targetCtx.fillRect(18, 3, 3, 1);
-    } else if (config.eyes === "determined") {
-        targetCtx.beginPath();
-        targetCtx.moveTo(17, -5);
-        targetCtx.lineTo(21, -3);
-        targetCtx.moveTo(17, 5);
-        targetCtx.lineTo(21, 3);
-        targetCtx.stroke();
-    }
-
     if (config.goggles !== "none") {
         targetCtx.fillStyle = "#0f172a";
         targetCtx.fillRect(15, -7, 2, 14);
         targetCtx.fillStyle = config.goggles;
         targetCtx.fillRect(17, -6, 4, 4);
         targetCtx.fillRect(17, 2, 4, 4);
-        targetCtx.strokeStyle = "#ffffff";
-        targetCtx.lineWidth = 1;
-        targetCtx.strokeRect(17, -6, 4, 4);
-        targetCtx.strokeRect(17, 2, 4, 4);
     }
 
-    if (gameState.debugShowHitboxes && entityTag) {
-        targetCtx.strokeStyle = "#14b8a6";
-        targetCtx.lineWidth = 1.5;
-        targetCtx.strokeRect(-28, -14, 52, 28);
-        targetCtx.fillStyle = "#2dd4bf";
-        targetCtx.font = "9px monospace";
-        targetCtx.fillText(`[${entityTag}]`, -24, -18);
-        targetCtx.fillText(`x:${Math.round(x)} y:${Math.round(y)}`, -24, 24);
+    if (entityTag) {
+        targetCtx.fillStyle = "#38bdf8";
+        targetCtx.font = "bold 9px monospace";
+        targetCtx.textAlign = "center";
+        targetCtx.fillText(entityTag, 0, -18);
     }
 
     targetCtx.restore();

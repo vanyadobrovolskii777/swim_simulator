@@ -1,0 +1,403 @@
+/* Standard sharp cursor across the entire page */
+*, *::before, *::after, html, body {
+    cursor: default !important;
+    box-sizing: border-box;
+}
+
+input[type="text"] {
+    cursor: text !important;
+}
+
+button, a, .nav-btn, .win98-btn, .result-title a {
+    cursor: pointer !important;
+}
+
+body {
+    margin: 0;
+    padding: 16px;
+    background-color: #008080; /* Classic Windows Teal background */
+    font-family: "Times New Roman", Times, serif;
+    color: #000000;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+}
+
+/* Classic Windows 98 Window Container */
+.window-frame {
+    width: 100%;
+    max-width: 900px;
+    background-color: #ece9d8;
+    border: 3px outset #ffffff;
+    box-shadow: 4px 4px 14px rgba(0, 0, 0, 0.4);
+    margin-top: 10px;
+}
+
+/* Title Bar */
+.title-bar {
+    background: linear-gradient(to right, #000080, #1084d0);
+    color: #ffffff;
+    padding: 3px 6px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: "Tahoma", "Segoe UI", sans-serif;
+    font-weight: bold;
+    font-size: 12px;
+    user-select: none;
+}
+
+.title-bar-text {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    letter-spacing: 0.2px;
+}
+
+.title-bar-controls {
+    display: flex;
+    gap: 2px;
+}
+
+/* Windows 98 Buttons */
+.win98-btn {
+    background: #ece9d8;
+    border: 2px outset #ffffff;
+    width: 18px;
+    height: 16px;
+    font-size: 10px;
+    font-family: "Tahoma", sans-serif;
+    font-weight: bold;
+    line-height: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    color: #000000;
+}
+
+.win98-btn:active {
+    border-style: inset;
+    padding-top: 1px;
+    padding-left: 1px;
+}
+
+/* Top Navigation Bar */
+.top-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 24px;
+    border-bottom: 2px groove #ffffff;
+    background-color: #ece9d8;
+}
+
+.logo-container .logo {
+    font-size: 38px;
+    font-weight: bold;
+    letter-spacing: -1px;
+    margin: 0;
+    user-select: none;
+    display: inline-flex;
+}
+
+.logo span {
+    display: inline-block;
+    text-shadow: 2px 2px 0px rgba(0, 0, 0, 0.15), 3px 3px 6px rgba(0, 0, 0, 0.2);
+}
+
+.top-menu {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    position: relative;
+}
+
+.nav-btn {
+    background: #ece9d8;
+    border: 2px outset #ffffff;
+    padding: 4px 12px;
+    font-size: 13px;
+    font-family: "Times New Roman", serif;
+    font-weight: bold;
+}
+
+.nav-btn:active {
+    border-style: inset;
+}
+
+/* Dropdown Menu */
+.dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.dropdown-content {
+    display: none;
+    position: absolute;
+    right: 0;
+    top: 100%;
+    margin-top: 4px;
+    background-color: #ece9d8;
+    min-width: 140px;
+    box-shadow: 2px 4px 10px rgba(0,0,0,0.3);
+    border: 2px outset #ffffff;
+    z-index: 100;
+}
+
+.dropdown-content.show {
+    display: block;
+}
+
+.dropdown-content a {
+    color: #000000;
+    padding: 8px 14px;
+    text-decoration: none;
+    display: block;
+    font-size: 13px;
+}
+
+.dropdown-content a:hover {
+    background-color: #000080;
+    color: #ffffff;
+}
+
+/* Centered Main Body */
+.main-content {
+    background-color: #ffffff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 50px 20px 40px;
+    text-align: center;
+    min-height: 520px;
+}
+
+.search-box-container {
+    background-color: #f2f2f2;
+    border: 1px solid #a6a6a6;
+    box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.08);
+    padding: 20px 28px;
+    display: inline-block;
+}
+
+.tagline {
+    font-size: 16px;
+    margin: 0 0 12px 0;
+    font-weight: bold;
+    color: #222222;
+}
+
+#search-input {
+    width: 340px;
+    max-width: 80vw;
+    padding: 6px 8px;
+    font-size: 15px;
+    border: 1px solid #7f9db9;
+    margin-bottom: 14px;
+    display: block;
+}
+
+.buttons {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+}
+
+.buttons button {
+    background: #ece9d8;
+    border: 2px outset #ffffff;
+    padding: 5px 12px;
+    font-size: 13px;
+}
+
+.buttons button:active {
+    border-style: inset;
+}
+
+.results-container {
+    margin-top: 30px;
+    text-align: left;
+    background: #ffffff;
+    border: 1px solid #dcdcdc;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    padding: 20px 24px;
+    width: 100%;
+    max-width: 650px;
+}
+
+.results-container.hidden {
+    display: none;
+}
+
+.video-section {
+    background: #f8f9fa;
+    border: 1px solid #e2e8f0;
+    padding: 14px;
+    margin-bottom: 20px;
+}
+
+.video-header {
+    font-size: 14px;
+    color: #cc181e;
+    margin-bottom: 12px;
+}
+
+.video-card {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px dashed #dcdcdc;
+}
+
+.video-card:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+.video-thumb {
+    width: 120px;
+    height: 68px;
+    object-fit: cover;
+    border: 1px solid #cccccc;
+}
+
+.video-info {
+    flex: 1;
+}
+
+.result-item {
+    margin-bottom: 18px;
+}
+
+.result-title a {
+    color: #1a0dab;
+    font-size: 16px;
+    font-weight: 500;
+    text-decoration: underline;
+}
+
+.result-url {
+    color: #006621;
+    font-size: 13px;
+    margin: 2px 0;
+}
+
+.result-snippet {
+    font-size: 14px;
+    color: #4d5156;
+    line-height: 1.4;
+}
+
+/* Modals */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.4);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal-overlay.hidden {
+    display: none;
+}
+
+.retro-modal {
+    display: none;
+    background: #ece9d8;
+    border: 3px outset #ffffff;
+    box-shadow: 4px 4px 12px rgba(0,0,0,0.5);
+    width: 350px;
+}
+
+.retro-modal.active {
+    display: block;
+}
+
+.modal-header {
+    background: linear-gradient(to right, #000080, #1084d0);
+    color: #ffffff;
+    padding: 3px 6px;
+    font-family: "Tahoma", sans-serif;
+    font-weight: bold;
+    font-size: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-body {
+    padding: 16px;
+    font-size: 13px;
+}
+
+.win98-dialog-body {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+}
+
+.dialog-icon {
+    font-size: 32px;
+}
+
+.win98-dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 0 16px 14px 16px;
+}
+
+.win98-dialog-btn {
+    background: #ece9d8;
+    border: 2px outset #ffffff;
+    padding: 4px 16px;
+    font-family: "Tahoma", sans-serif;
+    font-size: 12px;
+    min-width: 60px;
+}
+
+.win98-dialog-btn:active {
+    border-style: inset;
+}
+
+.dialer-box {
+    display: flex;
+    gap: 6px;
+    margin-top: 10px;
+}
+
+.dialer-box input {
+    flex: 1;
+    padding: 4px;
+}
+
+.favorites-list {
+    padding-left: 20px;
+    margin: 0;
+}
+
+.favorites-list li {
+    margin-bottom: 8px;
+}
+
+.favorites-list a {
+    color: #0000cc;
+    text-decoration: underline;
+}
+
+footer {
+    margin-top: 40px;
+    font-size: 12px;
+    color: #777777;
+    text-align: center;
+}
