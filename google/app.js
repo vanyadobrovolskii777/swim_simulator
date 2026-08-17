@@ -29,7 +29,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const windowFrame = document.querySelector(".window-frame");
 
     // ==========================================
-    // 🔊 Web Audio API: Static & DTMF Dial Tones
+    // 🔊 Audio API: Static & DTMF Dial Tones
     // ==========================================
     let audioCtx = null;
 
@@ -43,7 +43,6 @@ document.addEventListener("DOMContentLoaded", () => {
         return audioCtx;
     }
 
-    // Dual-Tone Multi-Frequency (DTMF) Frequencies for Real Phone Sounds
     const dtmfFreqs = {
         "1": [697, 1209], "2": [697, 1336], "3": [697, 1477],
         "4": [770, 1209], "5": [770, 1336], "6": [770, 1477],
@@ -120,54 +119,151 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // ==========================================
-    // 📞 Phone Dialer Logic
+    // 🔮 Magic Gibbering Voice Synthesizer
     // ==========================================
-    keyBtns.forEach((btn) => {
-        btn.addEventListener("click", () => {
-            const key = btn.getAttribute("data-key");
-            if (phoneInput) {
-                phoneInput.value += key;
-            }
-            playTone(key);
-        });
-    });
+    function playMagicGibberishCall() {
+        const modalBody = callModal.querySelector(".modal-body");
+        const originalContent = modalBody.innerHTML;
 
-    if (backspaceBtn && phoneInput) {
-        backspaceBtn.addEventListener("click", () => {
-            phoneInput.value = phoneInput.value.slice(0, -1);
-        });
-    }
+        modalBody.innerHTML = `
+      <div style="text-align: center; padding: 10px;">
+        <div style="font-size: 32px; animation: spin-spell 2s infinite linear;">✨🔮✨</div>
+        <p style="color: #6a0dad; font-weight: bold; font-size: 14px; margin: 8px 0;">CONNECTED TO THE ASTRAL OPERATOR...</p>
+        <div id="incantation-text" style="font-family: 'Courier New', monospace; font-size: 13px; color: #333; background: #fff; padding: 8px; border: 2px inset #fff; height: 55px; overflow: hidden;">
+          ...establishing ethereal frequency...
+        </div>
+        <button class="win98-dialog-btn" id="hangup-magic-btn" style="margin-top: 12px; background: #d93025; color: #fff; font-weight: bold;">Hang Up</button>
+      </div>
+    `;
 
-    if (phoneInput) {
-        phoneInput.addEventListener("keydown", (e) => {
-            if (dtmfFreqs[e.key]) {
-                playTone(e.key);
-            }
-        });
-    }
+        // Gibberish incantations
+        const phrases = [
+            "Zorblax kalamari vintrox quendar!",
+            "Alakazam wibbly-wobbly gobble-degook!",
+            "Sim-sala-bim hocus pokus skiddle-dee-doo!",
+            "Floopity doo bazzle fizzle chronos abracadabra!",
+            "Razzle dazzle wiggly giggly shazam bong!"
+        ];
 
-    if (startCallBtn && phoneInput) {
-        startCallBtn.addEventListener("click", () => {
-            const rawNumber = phoneInput.value.trim();
-            if (!rawNumber) {
-                alert("Please enter a phone number first!");
+        let isCallActive = true;
+        const hangupBtn = document.getElementById("hangup-magic-btn");
+        const incantationBox = document.getElementById("incantation-text");
+
+        // Eerie frequency wobbler
+        const ctx = getAudioContext();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "sawtooth";
+        osc.frequency.setValueAtTime(220, ctx.currentTime);
+        osc.frequency.linearRampToValueAtTime(880, ctx.currentTime + 3);
+        gain.gain.setValueAtTime(0.04, ctx.currentTime);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+
+        // Voice utterance loop
+        function speakGibberish(index = 0) {
+            if (!isCallActive || index >= phrases.length) {
+                if (isCallActive) {
+                    incantationBox.textContent = "*The spellbound line went dead...*";
+                    try { osc.stop(); } catch(e){}
+                }
                 return;
             }
 
-            // Clean the number and initiate the real device call handler
-            const cleanNumber = rawNumber.replace(/[^0-9+*#]/g, "");
+            const phrase = phrases[index];
+            incantationBox.textContent = `"${phrase}"`;
 
-            // Play a quick sequence tone
-            playTone("1", 80);
-            setTimeout(() => playTone("5", 80), 90);
-            setTimeout(() => playTone("9", 120), 180);
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(phrase);
+                utterance.pitch = 1.8 + Math.random() * 0.4; // High-pitched magical voice
+                utterance.rate = 1.35; // Fast gibberish cadence
+                utterance.onend = () => {
+                    if (isCallActive) {
+                        setTimeout(() => speakGibberish(index + 1), 300);
+                    }
+                };
+                window.speechSynthesis.speak(utterance);
+            } else {
+                setTimeout(() => speakGibberish(index + 1), 1200);
+            }
+        }
 
-            // Trigger the real OS/browser telephone handler
-            setTimeout(() => {
-                window.location.href = `tel:${cleanNumber}`;
-            }, 300);
+        speakGibberish(0);
+
+        hangupBtn.addEventListener("click", () => {
+            isCallActive = false;
+            if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+            try { osc.stop(); } catch(e){}
+            modalBody.innerHTML = originalContent;
+            wireUpDialer();
         });
     }
+
+    // ==========================================
+    // 📞 Phone Dialer Logic & Easter Egg
+    // ==========================================
+    function wireUpDialer() {
+        const currentInput = document.getElementById("phone-input");
+        const currentKeys = document.querySelectorAll(".key-btn");
+        const currentBackspace = document.getElementById("dialer-backspace");
+        const currentCallBtn = document.getElementById("start-call-btn");
+
+        currentKeys.forEach((btn) => {
+            btn.onclick = () => {
+                const key = btn.getAttribute("data-key");
+                if (currentInput) currentInput.value += key;
+                playTone(key);
+            };
+        });
+
+        if (currentBackspace && currentInput) {
+            currentBackspace.onclick = () => {
+                currentInput.value = currentInput.value.slice(0, -1);
+            };
+        }
+
+        if (currentInput) {
+            currentInput.onkeydown = (e) => {
+                if (dtmfFreqs[e.key]) playTone(e.key);
+            };
+        }
+
+        if (currentCallBtn && currentInput) {
+            currentCallBtn.onclick = () => {
+                const rawNumber = currentInput.value.trim();
+                const cleanNumber = rawNumber.replace(/[^0-9+*#]/g, "");
+
+                if (!cleanNumber) {
+                    alert("Please enter a phone number first!");
+                    return;
+                }
+
+                // 🌟 Easter Egg check for 5552368
+                if (cleanNumber === "5552368" || cleanNumber === "15552368") {
+                    playTone("5", 100);
+                    setTimeout(() => playTone("5", 100), 120);
+                    setTimeout(() => playTone("5", 100), 240);
+                    setTimeout(() => {
+                        playMagicGibberishCall();
+                    }, 400);
+                    return;
+                }
+
+                // Standard Real Device Calling
+                playTone("1", 80);
+                setTimeout(() => playTone("5", 80), 90);
+                setTimeout(() => playTone("9", 120), 180);
+
+                setTimeout(() => {
+                    window.location.href = `tel:${cleanNumber}`;
+                }, 300);
+            };
+        }
+    }
+
+    wireUpDialer();
 
     // ==========================================
     // Navigation & Modals
@@ -243,6 +339,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     window.closeModals = function () {
+        if ('speechSynthesis' in window) window.speechSynthesis.cancel();
         if (modalOverlay) modalOverlay.classList.add("hidden");
         if (callModal) callModal.classList.remove("active");
         if (favoritesModal) favoritesModal.classList.remove("active");
@@ -335,7 +432,7 @@ document.addEventListener("DOMContentLoaded", () => {
         // Video Section
         const videoSection = document.createElement("div");
         videoSection.className = "video-section";
-        videoSection.innerHTML = `<div class="video-header"><strong>▶ Video Results:</strong></div>`;
+        videoSection.innerHTML = `<div class="video-header"><strong>▶ Video Results (CRT VCR Filter):</strong></div>`;
 
         if (videos && videos.length > 0) {
             videos.forEach((vid) => {
@@ -343,7 +440,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 vidCard.className = "video-card";
                 const thumb = vid.videoThumbnails?.[0]?.url || `https://i.ytimg.com/vi/${vid.videoId}/hqdefault.jpg`;
                 vidCard.innerHTML = `
-          <a href="https://www.youtube.com/watch?v=${vid.videoId}" target="_blank" rel="noopener noreferrer">
+          <a href="https://www.youtube.com/watch?v=${vid.videoId}" target="_blank" rel="noopener noreferrer" class="video-thumb-wrapper">
             <img class="video-thumb" src="${thumb}" alt="${escapeHtml(vid.title || '')}" />
           </a>
           <div class="video-info">

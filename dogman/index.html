@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Dog Man: Supa City Patrol!</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<div id="gameContainer">
+  <!-- Top HUD -->
+  <div id="hud">
+    <div class="hud-chip">
+      <span>DOG MAN:</span>
+      <span id="heartsDisplay" style="color: #ef4444; font-size: 16px;">❤️❤️❤️</span>
+    </div>
+    <div class="hud-chip">
+      <span>SUPA BAR:</span>
+      <div class="supa-bar-bg">
+        <div id="supaFill"></div>
+      </div>
+    </div>
+    <div class="hud-chip">
+      <span id="currentLevelBadge" style="color: #0284c7;">LVL 1</span>
+      <span>| SCORE:</span>
+      <span id="scoreDisplay" style="color: #f59e0b;">0</span>
+    </div>
+    <button class="comic-btn-sm" onclick="openLevelSelect()">📋 CHAPTERS</button>
+  </div>
+
+  <!-- Main Title & Level Select Screen -->
+  <div id="levelSelectScreen" class="menu-screen">
+    <div class="comic-modal">
+      <h1 class="comic-title">🐶 DOG MAN: SUPA PATROL! 💥</h1>
+      <p style="font-size: 13px; font-weight: bold; margin: 0; color: #475569;">
+        Choose your chapter to team up with Li'l Petey & defeat the villains!
+      </p>
+
+      <div class="level-grid">
+        <div class="level-card" onclick="startLevel(1)">
+          <div class="level-header">
+            <span>📖 CH. 1: HOT DOG INVASION</span>
+            <span>⭐</span>
+          </div>
+          <div class="level-desc">City Park: Defeat 5 living hot dog monsters!</div>
+        </div>
+
+        <div class="level-card" onclick="startLevel(2)">
+          <div class="level-header">
+            <span>📖 CH. 2: ROOFTOP PURSUIT</span>
+            <span>⭐⭐</span>
+          </div>
+          <div class="level-desc">Downtown: Dodge psychokinetic drones & hot dogs!</div>
+        </div>
+
+        <div class="level-card" onclick="startLevel(3)">
+          <div class="level-header">
+            <span>📖 CH. 3: FLIPPY'S FRENZY</span>
+            <span>⭐⭐⭐</span>
+          </div>
+          <div class="level-desc">Waterfront: Face Flippy the Fish's telekinetic waves!</div>
+        </div>
+
+        <div class="level-card" onclick="startLevel(4)">
+          <div class="level-header">
+            <span style="color: #ef4444;">🤖 CH. 4: MECHA-PETEY LAB</span>
+            <span style="color: #ef4444;">BOSS 🔥</span>
+          </div>
+          <div class="level-desc">Secret Hideout: Defeat Petey's giant Robot Mech!</div>
+        </div>
+      </div>
+
+      <button class="comic-btn" onclick="startLevel(1)">▶️ START FROM CHAPTER 1</button>
+    </div>
+  </div>
+
+  <!-- Comic Strip Cutscene Modal -->
+  <div id="comicStripOverlay">
+    <div class="comic-strip-container">
+      <div style="font-size: 20px; font-weight: 900; color: #0f172a;" id="comicStripTitle">
+        📖 COMIC CHAPTER INTERMISSION
+      </div>
+
+      <div class="panels-row">
+        <div class="comic-panel">
+          <div class="panel-bubble" id="panel1Bubble">"Oh no! Petey made more hot dogs!"</div>
+          <div class="panel-art" id="panel1Art">🌭💥</div>
+          <div style="font-size: 10px; font-weight: 900; color: #64748b;">PANEL 1</div>
+        </div>
+        <div class="comic-panel">
+          <div class="panel-bubble" id="panel2Bubble">"Don't worry Papa! Dog Man is on the way!"</div>
+          <div class="panel-art" id="panel2Art">🐱💡</div>
+          <div style="font-size: 10px; font-weight: 900; color: #64748b;">PANEL 2</div>
+        </div>
+        <div class="comic-panel">
+          <div class="panel-bubble" id="panel3Bubble">"BARK! Let's save the city!"</div>
+          <div class="panel-art" id="panel3Art">🐶🚀</div>
+          <div style="font-size: 10px; font-weight: 900; color: #64748b;">PANEL 3</div>
+        </div>
+      </div>
+
+      <button class="comic-btn" onclick="closeCutsceneAndStart()">READY TO PLAY! 💥</button>
+    </div>
+  </div>
+
+  <!-- Flip-O-Rama Action Overlay -->
+  <div id="flipOverlay">
+    <div class="flip-box">
+      <h2 style="font-size: 32px; color: #ef4444; margin: 0; text-shadow: 2px 2px 0px #0f172a;">💥 FLIP-O-RAMA! 💥</h2>
+      <div id="flipAnimationText" style="font-size: 48px; margin: 12px 0;">🐶 👊 🐱</div>
+      <p style="font-size: 13px; font-weight: 900; color: #0f172a; margin: 0;">FLIPPING PAGES... BARK POWER ACTIVATED!</p>
+    </div>
+  </div>
+
+  <!-- Win / Loss Screen -->
+  <div id="endOverlay" class="menu-screen" style="display: none;">
+    <div class="comic-modal">
+      <h2 id="endTitle" style="font-size: 30px; margin: 0;">CHAPTER COMPLETE!</h2>
+      <p id="endSubtitle" style="font-size: 14px; font-weight: bold; margin: 0; color: #475569;">You saved the day!</p>
+      <div style="display: flex; gap: 10px;">
+        <button class="comic-btn" id="nextLevelBtn" onclick="nextLevelAction()">NEXT CHAPTER ➡️</button>
+        <button class="comic-btn" style="background: #e2e8f0;" onclick="openLevelSelect()">📋 CHAPTER SELECT</button>
+      </div>
+    </div>
+  </div>
+
+  <canvas id="gameCanvas" width="780" height="500"></canvas>
+</div>
+
+<div id="controlsGuide">
+  <b>A / D or ◄ / ►</b>: Run &nbsp;|&nbsp; <b>W or ▲ / SPACE</b>: Jump &nbsp;|&nbsp; <b>J or Z</b>: Bark / Chomp Punch<br>
+  <b>K or X</b>: Bone Toss &nbsp;|&nbsp; <b>L or C</b>: 80-HD Supa Beam (When Full) &nbsp;|&nbsp; <b>Li'l Petey</b>: Follows & drops hearts/power!
+</div>
+
+<script src="main.js"></script>
+</body>
+</html>
